@@ -1,0 +1,43 @@
+.update-tag:
+  stage: commit
+  image: $CI_TEMPLATE_REGISTRY_HOST/library/rhelgit:latest
+  before_script:
+    - git config --global http.sslVerify false
+    - git config --global --add safe.directory '*'
+    - git config --global user.name "ci"
+    - git config --global user.email "ci.cedge@sbi.co.in"    
+    - git remote set-url origin https://gitlab-ci-token:$GIT_PAT@gitlab.epay.sbi/$CI_PROJECT_PATH.git
+  script:
+    - TAG=$VERSION
+    - SERVICE_PATH="${ENV}/charts/${SERVICE_NAME}"
+    - ls -ltrh $SERVICE_PATH
+    - cat $SERVICE_PATH/values.yaml
+    - echo "Tag is $TAG"
+    - sed -i "s/\(tag:\).*/\1 \"${TAG}\"/" $SERVICE_PATH/values.yaml
+    - git fetch 
+    - git status
+    - git branch -a  
+    - git checkout $CI_COMMIT_BRANCH
+    - git add $SERVICE_PATH/values.yaml
+    - git status --porcelain
+    - |
+      if [[ `git status --porcelain` ]]; then
+        # Changes
+        git commit -m "Update image tag to $TAG"
+        git push origin $CI_COMMIT_BRANCH
+      else
+        # No changes
+        echo "No changes in git"
+      fi
+    - cat $SERVICE_PATH/values.yaml
+  # rules:
+  # prevent the stage from running if the pipeline source is a push
+  #  - if: '$CI_PIPELINE_SOURCE == "push"'
+  #    when: never
+  # Run if the commit branch is 'release' and merge request is approved.
+  #  - if: '$CI_COMMIT_BRANCH =~ /^(develop|release)$/ && $CI_MERGE_REQUEST_APPROVED == "true"'
+  #    when: on_success
+  # default rule: preven the stage from running unless conditions are met
+  #  - when: never 
+   # Run if anything commited to the commit branch(('develop', 'release' or 'main')
+    # - if: '$CI_COMMIT_BRANCH =~ /^(develop|release|main)$/'
