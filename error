@@ -1,0 +1,24 @@
+microservice Dockerfile____
+FROM registry.dev.sbiepay.sbi:8443/ubi9/openjdk-21-runtime:1.23-6.1758133907
+ARG ENV
+ARG VERSION
+ENV ENV=$ENV
+ENV VERSION=$VERSION
+COPY /build/libs/epay_admin_service-${VERSION}.jar .
+# ENTRYPOINT ["java","-jar","epay_admin_service-$VERSION.jar"]
+ENTRYPOINT sh -c 'java -jar "epay_admin_service-$VERSION.jar"'
+
+
+frontend Dockerfile____
+FROM registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1756959223
+USER 0
+RUN mkdir -p /usr/share/nginx/html/maintenance
+COPY ./dist/ /usr/share/nginx/html/maintenance
+RUN ls -lrth /usr/share/nginx/html/maintenance
+RUN chmod 755 -R  /usr/share/nginx/html/maintenance
+RUN chown -R nginx:nginx /usr/share/nginx/html/maintenance
+COPY ./nginx.conf /etc/nginx/nginx.conf
+RUN find /etc/nginx -type d | xargs chmod 750
+RUN find /etc/nginx -type f | xargs chmod 640
+EXPOSE 8080/tcp
+CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
