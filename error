@@ -1,24 +1,86 @@
-microservice Dockerfile____
-FROM registry.dev.sbiepay.sbi:8443/ubi9/openjdk-21-runtime:1.23-6.1758133907
-ARG ENV
-ARG VERSION
-ENV ENV=$ENV
-ENV VERSION=$VERSION
-COPY /build/libs/epay_admin_service-${VERSION}.jar .
-# ENTRYPOINT ["java","-jar","epay_admin_service-$VERSION.jar"]
-ENTRYPOINT sh -c 'java -jar "epay_admin_service-$VERSION.jar"'
-
-
-frontend Dockerfile____
-FROM registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1756959223
-USER 0
-RUN mkdir -p /usr/share/nginx/html/maintenance
-COPY ./dist/ /usr/share/nginx/html/maintenance
-RUN ls -lrth /usr/share/nginx/html/maintenance
-RUN chmod 755 -R  /usr/share/nginx/html/maintenance
-RUN chown -R nginx:nginx /usr/share/nginx/html/maintenance
-COPY ./nginx.conf /etc/nginx/nginx.conf
-RUN find /etc/nginx -type d | xargs chmod 750
-RUN find /etc/nginx -type f | xargs chmod 640
-EXPOSE 8080/tcp
-CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
+Name	Last commit	Last update
+public
+MP-546|RRG| cleared the refund book data on drawer close
+3 months ago
+src
+MP-735|RG|transactions view Order Amount
+3 days ago
+.env
+Added .env
+9 months ago
+.env.development
+MP-340|KS|code changes for dev api url
+7 months ago
+.env.mi
+MP-682|RG| added build script for integration
+1 month ago
+.env.perf
+MP-728|RG| build script added for perf
+2 months ago
+.env.pre-prod
+MP-696|RRG|Added environment for pre-prod
+2 months ago
+.env.production
+code changes for .env file creation
+9 months ago
+.env.sit
+MP-195|KS|code changes for env file for API base url for SIT
+7 months ago
+.env.uat
+MP-42|KS| Code changes for env created for uat and done changes in package.json file too
+7 months ago
+.gitignore
+git ignore config updated
+8 months ago
+.gitlab-ci.yml
+ETP-00|SA|Edit .gitlab-ci.yml
+4 months ago
+Dockerfile
+EAM-00|TR|Updating new nginx Image
+2 months ago
+README.md
+base setup
+1 year ago
+components.json
+dashboard_code_refactor
+10 months ago
+eslint.config.js
+base setup
+1 year ago
+index.html
+MP-682|RG|transaction trend code changes
+1 month ago
+nginx.conf
+AEM-00|TR|Seggregate Acces log by filter
+2 months ago
+package-lock.json
+MP-724|RG|rename variable names for isd issue
+1 month ago
+package.json
+MP-682|RG| added build script for integration
+1 month ago
+postcss.config.js
+Mechant epay login and reset password
+11 months ago
+setproxy.cmd
+Dashboard important notice mock api implementation
+8 months ago
+tailwind.config.js
+MP-505|CS|Payment theme save btn disable for 1st time, Datepicker UI overlapped issue resolved
+4 months ago
+tsconfig.app.json
+Mechant epay login and reset password
+11 months ago
+tsconfig.json
+Mechant epay login and reset password
+11 months ago
+tsconfig.node.json
+Configured react-router, tsx, vite, aboslute path etc
+11 months ago
+tsconfig.node.tsbuildinfo
+login apis integrations
+10 months ago
+vite.config.ts
+MP-42|CS|updated vite config
+7 months ago
+ README.md
