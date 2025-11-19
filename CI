@@ -1,0 +1,603 @@
+Build_____
+
+_________Android.yml____
+
+.build:
+  stage: build
+  image: 
+    name:  registry.dev.sbiepay.sbi:8443/ubi9/gradle-8.9-jdk-21:v6
+    pull_policy: always  
+  script:
+    - pwd
+    - ls -la
+    - gradlew clean :android_epay:assembleRelease
+    - |
+      if [ -n "$VERSION" ]; then
+        echo "version ${VERSION}"
+        gradle build -x test -Pversion=${VERSION}
+      else
+        gradle build -x test 
+      fi
+    - ls -lrth
+    - ls -lrth build/libs
+  artifacts:
+    paths:
+      - build/libs
+    when: on_success 
+    expire_in: 1 week
+
+_________gradle.java.yml____________
+.build:
+  stage: build
+  image: 
+    name:  registry.dev.sbiepay.sbi:8443/ubi9/gradle-8.9-jdk-21:v6
+    pull_policy: always  
+  script:
+    - pwd
+    - ls -la
+    - |
+      if [ -n "$VERSION" ]; then
+        echo "version ${VERSION}"
+        gradle build -x test -Pversion=${VERSION}
+      else
+        gradle build -x test 
+      fi
+    - ls -lrth
+    - ls -lrth build/libs
+  artifacts:
+    paths:
+      - build/libs
+    when: on_success 
+    expire_in: 1 week
+
+_____nodejs.yml____
+
+.build:
+  stage: build
+  image: 
+    name:  registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+    pull_policy: always  
+  script:
+    - pwd
+    #- mkdir $ENV
+    #- ls -la
+    - npm config set proxy http://serverswg.sbi.co.in:80
+    - npm config set https-proxy http://serverswg.sbi.co.in:9090
+    - ls /app
+    - npm cache clean --force
+    - |
+      if [ -n "$VERSION" ]; then
+        echo "version ${VERSION}"
+        # npm version "${VERSION}" --no-git-tag-version
+      fi
+    # - npm install --legacy-peer-deps
+    - npm install
+    #- npm install --loglevel verbose
+    #- npm install rollup@latest
+    - npm run build
+    - ls -lrth
+    #- ls -lrth /dev
+    #- npm install --save-dev eslint-plugin-react eslint-plugin-react-hooks
+    #- npm run lint -- --debug
+    #- npm run lint 
+  artifacts:
+    paths:
+      - ./dist
+    when: on_success 
+    expire_in: 1 week
+
+_________podman.container.yml__________
+.dockerbuild:
+  stage: dockerbuild
+  script:
+    - ls -ltrh
+    - echo $VERSION
+    - TAG="${VERSION}"
+    - echo "Generated Tag.. ${TAG}"
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - podman build -t $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$TAG -f Dockerfile --tls-verify=false --build-arg ENV=$ENV --build-arg VERSION=$TAG
+    - podman push $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$TAG --tls-verify=false 
+
+_______vite.react.yml________
+
+.build:
+  stage: build
+  image: 
+    name:  registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+    pull_policy: always  
+  script:
+    - pwd
+    - mkdir $ENV
+    - ls -la
+    - npm config set proxy http://serverswg.sbi.co.in:80
+    - npm config set https-proxy http://serverswg.sbi.co.in:9090
+    - ls /app
+    - npm cache clean --force
+    - |
+      if [ -n "$VERSION" ]; then
+        echo "version ${VERSION}"
+        # npm version "${VERSION}" --no-git-tag-version
+      fi
+    # - npm install --legacy-peer-deps
+    - npm install
+    #- npm install --loglevel verbose
+    #- npm install rollup@latest
+    - npm run build:$ENV
+    - ls -lrth
+    - ls -lrth /dev
+    #- npm install --save-dev eslint-plugin-react eslint-plugin-react-hooks
+    #- npm run lint -- --debug
+    #- npm run lint 
+  artifacts:
+    paths:
+      - ./dist
+    when: on_success 
+    expire_in: 1 week
+
+2: deploy___
+__deploy.yml_________
+.trigger_cd:
+  stage: deploy
+  variables:
+    DEPLOYMENT_BRANCH: "main"
+  trigger:
+    project: epay/devops/deployment
+    branch: $DEPLOYMENT_BRANCH
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
+  # manual_confirmation: 'Are you sure you want to deploy VERSION to ENV?'
+  # rules:
+  #   # - if: $CI_COMMIT_BRANCH =~ /^(main)|(develop)|(release)(\/.+)*$/ 
+  #   - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)|(develop)|(release)(\/.+)*$/
+  #     # default rule: preven the stage from running unless conditions are met
+  #     when: manual
+  #     allow_failure: true
+  #   - when: never  
+
+3: Java-applications-images_____
+___.gitkeep___
+Empty file
+
+4:Reactjs-frontend-images______
+
+merchantfe folder 
+___dist folder 
+Name	Last commit	Last update
+..
+assets
+images
+10 months ago
+mock-api
+index.html
+______Dockerfile______
+FROM registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1750938241
+USER 0
+RUN mkdir -p /usr/share/nginx/html/merchantpanel
+COPY ./dist/ /usr/share/nginx/html/merchantpanel 
+RUN ls -lrth /usr/share/nginx/html/merchantpanel 
+RUN chmod 755 -R  /usr/share/nginx/html/merchantpanel
+RUN chown -R nginx:nginx /usr/share/nginx/html/merchantpanel 
+COPY ./nginx.conf /etc/nginx/nginx.conf
+EXPOSE 8080/tcp  
+CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
+
+____nginx.conf____
+
+http {
+
+  include mime.types;
+
+  set_real_ip_from        0.0.0.0/0;
+  real_ip_recursive       on;
+  real_ip_header          X-Forward-For;
+  limit_req_zone          $binary_remote_addr zone=mylimit:10m rate=10r/s;
+
+  server {
+    listen 8080;
+    server_name localhost:8080;
+    root /usr/share/nginx/html;
+    limit_req zone=mylimit burst=70 nodelay;
+
+    location /merchantpanel/ {
+             index  index.html index.htm;
+             alias /usr/share/nginx/html/merchantpanel/;
+             try_files $uri $uri/ /merchantpanel/index.html;
+
+         #   index  index.html index.htm;
+         #   try_files $uri  $uri/ /index.html;   
+        }
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html/merchantpanel;
+    }
+  }
+}
+
+events {}
+
+____..
+merchantfe
+merchantsimulator
+transaction_fe  (same for this folder )
+
+4: publish
+
+___gradle.java.yml_____
+
+.publish:
+  stage: publish
+  image: 
+    name:  registry.dev.sbiepay.sbi:8443/ubi9/gradle-8.9-jdk-21:v6
+    pull_policy: always  
+  script:
+    - echo "Publishing"
+    - gradle publish
+5: release
+
+___release.yml_________
+
+.tag:
+  stage: release
+  image: $CI_TEMPLATE_REGISTRY_HOST/library/rhelgit:latest
+  before_script:
+    - git config --global http.sslVerify false
+    - git config --global --add safe.directory '*'
+    - git config --global user.name "ci"
+    - git config --global user.email "ci.cedge@sbi.co.in"    
+    - git remote set-url origin https://gitlab-ci-token:$GIT_PAT@gitlab.epay.sbi/$CI_PROJECT_PATH.git
+  script:
+    # Create new tag and push it
+    - git tag "$VERSION"
+    - git push origin "$VERSION"
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(main)|(release)(\/.+)*$/'
+
+____version.yml___
+version:
+  stage: .pre
+  image: $CI_TEMPLATE_REGISTRY_HOST/library/rhelgit:latest
+  variables:
+    VERSION_TYPE: PATCH
+  before_script:
+    - git config --global http.sslVerify false
+    - git config --global --add safe.directory '*'
+  script:
+    - |
+      handle_error() {
+        local exit_code=$?
+        local script_line_number=$1
+        local error_message=$2
+        local function_name=$3
+        
+        echo "ERROR: $error_message"
+        echo "ERROR: $error_message" >> version_error.log
+        echo "ERROR_DETAILS: Function=$function_name, Script_Line=$script_line_number, Exit_Code=$exit_code" >> version_error.log
+        
+        echo "ERROR_OCCURRED=true" >> version.env
+        echo "ERROR_MESSAGE=$error_message" >> version.env
+        echo "ERROR_FUNCTION=$function_name" >> version.env
+        echo "ERROR_SCRIPT_LINE=$script_line_number" >> version.env
+        echo "ERROR_EXIT_CODE=$exit_code" >> version.env
+        
+        exit $exit_code
+      }
+      
+      set -e
+      
+      echo "Starting version generation for branch: $CI_COMMIT_BRANCH"
+      
+      # Fetch git tags
+      git fetch --tags || handle_error ${LINENO} "Failed to fetch git tags" "git_fetch"
+      
+      # Version logic for different branch types
+      if [[ "$CI_COMMIT_BRANCH" =~ ^(main)$ ]]; then
+        # Standard semantic versioning for main/develop
+        echo "Processing main/develop branch versioning..."
+        
+        LAST_TAG=$(git tag --sort=-v:refname | head -n 1 || echo "")
+        echo "Last Tag: $LAST_TAG"
+        
+        if [[ -z "$LAST_TAG" ]]; then
+          echo "WARNING: No tags found, using default version v0.0.0"
+          LAST_TAG="v0.0.0"
+        fi
+        
+        # Validate tag format
+        if ! [[ "$LAST_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "WARNING: Invalid tag format '$LAST_TAG', using default version v0.0.0"
+          LAST_TAG="v0.0.0"
+        fi
+        
+        VERSION=$LAST_TAG
+        LAST_TAG="${LAST_TAG//v/}"
+        
+        # Extract version components
+        MAJOR=$(echo $LAST_TAG | cut -d '.' -f 1)
+        MINOR=$(echo $LAST_TAG | cut -d '.' -f 2)
+        PATCH=$(echo $LAST_TAG | cut -d '.' -f 3)
+        
+        # Validate version components
+        if ! [[ "$MAJOR" =~ ^[0-9]+$ ]] || ! [[ "$MINOR" =~ ^[0-9]+$ ]] || ! [[ "$PATCH" =~ ^[0-9]+$ ]]; then
+          handle_error ${LINENO} "Invalid version components: MAJOR=$MAJOR, MINOR=$MINOR, PATCH=$PATCH" "version_validation"
+        fi
+        
+        echo "Version components - MAJOR: $MAJOR, MINOR: $MINOR, PATCH: $PATCH"
+        
+        # Increment version based on VERSION_TYPE
+        case "$VERSION_TYPE" in
+          "MAJOR")
+            VERSION="v$((MAJOR+1)).0.0"
+            echo "Incrementing MAJOR version"
+            ;;
+          "MINOR")
+            VERSION="v${MAJOR}.$((MINOR+1)).0"
+            echo "Incrementing MINOR version"
+            ;;
+          "PATCH")
+            VERSION="v${MAJOR}.${MINOR}.$((PATCH+1))"
+            echo "Incrementing PATCH version"
+            ;;
+          *)
+            echo "WARNING: Unknown VERSION_TYPE '$VERSION_TYPE', defaulting to PATCH increment"
+            VERSION="v${MAJOR}.${MINOR}.$((PATCH+1))"
+            ;;
+        esac
+        
+        echo "Calculated version: $VERSION"
+        
+      elif [[ "$CI_COMMIT_BRANCH" =~ ^release/v([0-9]+\.[0-9]+)\.([0-9]+)$ ]]; then
+        # Release branch versioning - extract version from branch name
+        echo "Processing release branch versioning..."
+        
+        # Extract major.minor from branch name (e.g., 0.1 from release/v0.1.0)
+        BRANCH_MAJOR_MINOR="${BASH_REMATCH[1]}"  # 0.1
+        BRANCH_PATCH="${BASH_REMATCH[2]}"        # 0
+        
+        # Validate extracted version components
+        if [[ -z "$BRANCH_MAJOR_MINOR" ]] || [[ -z "$BRANCH_PATCH" ]]; then
+          handle_error ${LINENO} "Failed to extract version from branch name: $CI_COMMIT_BRANCH" "branch_version_extraction"
+        fi
+        
+        # Validate major.minor format
+        if ! [[ "$BRANCH_MAJOR_MINOR" =~ ^[0-9]+\.[0-9]+$ ]]; then
+          handle_error ${LINENO} "Invalid major.minor format: $BRANCH_MAJOR_MINOR" "branch_version_validation"
+        fi
+        
+        # Validate patch format
+        if ! [[ "$BRANCH_PATCH" =~ ^[0-9]+$ ]]; then
+          handle_error ${LINENO} "Invalid patch format: $BRANCH_PATCH" "branch_patch_validation"
+        fi
+        
+        echo "Branch Major.Minor: $BRANCH_MAJOR_MINOR"
+        echo "Branch Patch: $BRANCH_PATCH"
+        
+        # Find the latest patch version for this major.minor series
+        echo "Searching for existing tags in series v${BRANCH_MAJOR_MINOR}.*"
+        
+        GREP_PATTERN="^v${BRANCH_MAJOR_MINOR}\."
+        LATEST_PATCH_TAG=$(git tag --sort=-v:refname | grep "$GREP_PATTERN" | head -n 1 || true)
+        
+        if [[ -n "$LATEST_PATCH_TAG" ]]; then
+          # Extract patch number from latest tag
+          echo "Latest patch tag found: $LATEST_PATCH_TAG"
+          
+          # Validate tag format
+          if ! [[ "$LATEST_PATCH_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            handle_error ${LINENO} "Invalid tag format found: $LATEST_PATCH_TAG" "tag_format_validation"
+          fi
+          
+          LATEST_PATCH=$(echo $LATEST_PATCH_TAG | cut -d '.' -f 3)
+          
+          # Validate extracted patch number
+          if ! [[ "$LATEST_PATCH" =~ ^[0-9]+$ ]]; then
+            handle_error ${LINENO} "Invalid patch number extracted: $LATEST_PATCH from tag: $LATEST_PATCH_TAG" "patch_extraction_validation"
+          fi
+          
+          NEW_PATCH=$((LATEST_PATCH + 1))
+          VERSION="v${BRANCH_MAJOR_MINOR}.${NEW_PATCH}"
+          
+          echo "Latest patch: $LATEST_PATCH"
+          echo "Incrementing patch to: $NEW_PATCH"
+        else
+          # No existing tags for this series, start with patch 1
+          echo "No existing tags for series v${BRANCH_MAJOR_MINOR}, starting with patch 1"
+          VERSION="v${BRANCH_MAJOR_MINOR}.1"
+        fi
+        
+        # Validate final version format
+        if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          handle_error ${LINENO} "Invalid final version generated: $VERSION" "final_version_validation"
+        fi
+        
+        echo "Release branch version: $VERSION"
+        
+      else
+        # Feature branch versioning with timestamp
+        echo "Processing feature branch versioning..."
+        
+        if [[ -z "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" && -z "$CI_COMMIT_REF_NAME" ]]; then
+          handle_error ${LINENO} "Both CI_MERGE_REQUEST_TARGET_BRANCH_NAME and CI_COMMIT_REF_NAME are empty" "branch_validation"
+        fi
+        
+        BRANCH_NAME="${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-$CI_COMMIT_REF_NAME}"
+        
+        # Validate branch name
+        if [[ -z "$BRANCH_NAME" ]]; then
+          handle_error ${LINENO} "Branch name is empty after extraction" "branch_name_validation"
+        fi
+        
+        TIMESTAMP=$(date +"%Y%m%d%H%M%S")
+        
+        if [[ -z "$TIMESTAMP" ]]; then
+          handle_error ${LINENO} "Failed to generate timestamp" "timestamp_generation"
+        fi
+        
+        # Validate timestamp format
+        if ! [[ "$TIMESTAMP" =~ ^[0-9]{14}$ ]]; then
+          handle_error ${LINENO} "Invalid timestamp format: $TIMESTAMP" "timestamp_format_validation"
+        fi
+        
+        VERSION="v-${BRANCH_NAME}-${TIMESTAMP}"
+        VERSION="${VERSION//\//-}"
+        
+        # Validate final feature branch version
+        if [[ -z "$VERSION" ]]; then
+          handle_error ${LINENO} "Generated feature branch version is empty" "feature_version_validation"
+        fi
+        
+        echo "Feature branch version: $VERSION"
+      fi
+      
+      # Validate final version
+      if [[ -z "$VERSION" ]]; then
+        handle_error ${LINENO} "VERSION is empty after processing" "final_validation"
+      fi
+      
+      # Output version information
+      echo "VERSION=$VERSION" >> version.env
+      echo "VERSION_GENERATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> version.env
+      echo "VERSION_TYPE_USED=$VERSION_TYPE" >> version.env
+      echo "BRANCH_USED=$CI_COMMIT_BRANCH" >> version.env
+      echo "ERROR_OCCURRED=false" >> version.env
+      
+      echo "SUCCESS: New version generated: $VERSION"
+      echo "Version information saved to version.env"
+      
+      echo "=== Version Generation Summary ==="
+      echo "Generated Version: $VERSION"
+      echo "Version Type: $VERSION_TYPE"
+      echo "Branch: $CI_COMMIT_BRANCH"
+      echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+      echo "=================================="
+  artifacts:
+    reports:
+      dotenv: version.env
+    paths:
+      - version_error.log
+    expire_in: 1 week
+  rules:
+   - when: on_success
+  allow_failure: false
+
+6: sast
+___fortify.sast.yml____
+.HPFortify:
+  variables:
+    FORTIFY_IMAGE: "registry.dev.sbiepay.sbi:8443/hpfortify/fortify_sca_23.1.0:v2-04072025"
+    FORTIFY_PROJECT: $CI_PROJECT_NAME
+    PROJECT_NAME: $CI_PROJECT_NAME
+    FORTIFY_SCAN_OUTPUT: "$CI_PROJECT_NAME.fpr"
+    SOURCE_ANALYZER: "/opt/Fortify/Fortify_SCA_23.1.0/bin/sourceanalyzer"
+    BIRTReportGenerator: "/opt/Fortify/Fortify_Apps_and_Tools_23.1.0/bin/BIRTReportGenerator"
+    FORTIFY_PROJECT_DIR: "."
+    EXCLUDE_DIRS: "./src/test/**/*"
+    INCLUDE_DIRS: "./**/*.java"
+
+  stage: hp-fortify
+  image: $FORTIFY_IMAGE
+  script:
+    - ls
+    - SCAN_FILES=""
+    - IFS=',' read -ra INCLUDE_DIRS <<< "$INCLUDE_DIRS"
+    - for dir in "${INCLUDE_DIRS[@]}"; do
+        SCAN_FILES="$SCAN_FILES$dir ";
+      done
+    - echo "Scanning paths ${SCAN_FILES}"
+    - EXCLUDE_FILES=$(echo "$EXCLUDE_DIRS" | sed 's/,/:/g')
+    - echo "Excluding paths ${EXCLUDE_FILES}"
+    - $SOURCE_ANALYZER -b $FORTIFY_PROJECT -clean
+    - $SOURCE_ANALYZER -b $FORTIFY_PROJECT "${INCLUDE_DIRS}" -verbose -exclude "${EXCLUDE_FILES}"
+    # - $SOURCE_ANALYZER -b $FORTIFY_PROJECT -exclude "${EXC  LUDE_FILES}" -verbose
+
+    - $SOURCE_ANALYZER -b $FORTIFY_PROJECT -scan -format fpr -f "$FORTIFY_PROJECT_DIR/$FORTIFY_SCAN_OUTPUT"
+    - $SOURCE_ANALYZER -b $FORTIFY_PROJECT -show-files
+    - ls -l "$FORTIFY_PROJECT_DIR/$FORTIFY_SCAN_OUTPUT" 
+    - $BIRTReportGenerator \
+      -template "Developer Workbook" \
+      -source "${FORTIFY_PROJECT_DIR}/${FORTIFY_SCAN_OUTPUT}" \
+      -format PDF \
+      -output "${FORTIFY_PROJECT_DIR}/${PROJECT_NAME}_report.pdf" \
+      -showSuppressed \
+      -showHidden \
+      -Xmx4G
+    - echo "PDF generation complete."
+    - pwd
+    - echo ${FORTIFY_PROJECT_DIR}
+    - echo ${PROJECT_NAME}
+    - ls -lrth "${FORTIFY_PROJECT_DIR}" 
+  allow_failure: true
+  artifacts:
+    paths:
+      - "./*.fpr"
+      - "./*.pdf"
+    expire_in: 1 week
+________sast.yml____
+
+include:
+  - template: Jobs/SAST.latest.gitlab-ci.yml 
+
+sast: #Ovverride incuded job from SAST
+  stage: sast
+  variables:
+    GITLAB_ADVANCED_SAST_ENABLED: 'true'
+    SECURE_ANALYZERS_PREFIX: "$CI_TEMPLATE_REGISTRY_HOST/ubi9/security-products"
+    CI_TEMPLATE_REGISTRY_HOST: "registry.dev.sbiepay.sbi:8443"
+    DEFAULT_SAST_EXCLUDED_PATHS: "spec, test, tests, tmp"
+    SAST_EXCLUDED_PATHS: "$DEFAULT_SAST_EXCLUDED_PATHS"
+    SEARCH_MAX_DEPTH: 4  
+    SAST_ANALYZER_IMAGE_TAG: '1'
+
+gitlab-advanced-sast: #Ovverride incuded job from SAST
+  variables:
+    SAST_ANALYZER_IMAGE_TAG: '1'
+
+.sast:
+  stage: sast
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+
+.send-reports:
+  stage: sast
+  image: 
+    name: "$SAST_ANALYZER_IMAGE"
+    pull_policy: always
+  dependencies:
+    - sast
+  before_script:
+    - echo "This is the send-reports before_script"
+  script:
+    - echo "in send-reports job"
+    - ls
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+
+7: test
+___gradle.java.yml_____
+.test:
+  stage: test
+  image: 
+    name:  registry.dev.sbiepay.sbi:8443/ubi9/gradle-8.9-jdk-21:v6
+    pull_policy: always
+  script:
+    - pwd
+    - ls -lrth
+    - gradle test
+
+
+
+
+
+
+
+
+
+
+
+
+
+
