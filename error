@@ -1,86 +1,215 @@
-Name	Last commit	Last update
-public
-MP-546|RRG| cleared the refund book data on drawer close
-3 months ago
-src
-MP-735|RG|transactions view Order Amount
-3 days ago
-.env
-Added .env
-9 months ago
-.env.development
-MP-340|KS|code changes for dev api url
-7 months ago
-.env.mi
-MP-682|RG| added build script for integration
-1 month ago
-.env.perf
-MP-728|RG| build script added for perf
-2 months ago
-.env.pre-prod
-MP-696|RRG|Added environment for pre-prod
-2 months ago
-.env.production
-code changes for .env file creation
-9 months ago
-.env.sit
-MP-195|KS|code changes for env file for API base url for SIT
-7 months ago
-.env.uat
-MP-42|KS| Code changes for env created for uat and done changes in package.json file too
-7 months ago
-.gitignore
-git ignore config updated
-8 months ago
-.gitlab-ci.yml
-ETP-00|SA|Edit .gitlab-ci.yml
-4 months ago
-Dockerfile
-EAM-00|TR|Updating new nginx Image
-2 months ago
-README.md
-base setup
-1 year ago
-components.json
-dashboard_code_refactor
-10 months ago
-eslint.config.js
-base setup
-1 year ago
-index.html
-MP-682|RG|transaction trend code changes
-1 month ago
-nginx.conf
-AEM-00|TR|Seggregate Acces log by filter
-2 months ago
-package-lock.json
-MP-724|RG|rename variable names for isd issue
-1 month ago
-package.json
-MP-682|RG| added build script for integration
-1 month ago
-postcss.config.js
-Mechant epay login and reset password
-11 months ago
-setproxy.cmd
-Dashboard important notice mock api implementation
-8 months ago
-tailwind.config.js
-MP-505|CS|Payment theme save btn disable for 1st time, Datepicker UI overlapped issue resolved
-4 months ago
-tsconfig.app.json
-Mechant epay login and reset password
-11 months ago
-tsconfig.json
-Mechant epay login and reset password
-11 months ago
-tsconfig.node.json
-Configured react-router, tsx, vite, aboslute path etc
-11 months ago
-tsconfig.node.tsbuildinfo
-login apis integrations
-10 months ago
-vite.config.ts
-MP-42|CS|updated vite config
-7 months ago
- README.md
+.helm_update:
+   stage: deploy
+   image: registry.dev.sbiepay.sbi:8443/ubi9/ochelm:03122024
+   script:
+     - oc login "$OPENSHIFT_SERVER" --token="$OPENSHIFT_TOKEN" --insecure-skip-tls-verify
+     - oc project $NAMESPACE
+     - cd ./$ENV/charts/
+     - sed -i "s/\(tag:\).*/\1 \"${VERSION}\"/" $SERVICE/values.yaml
+     - helm upgrade --install $RELEASE -f $SERVICE/values.yaml   $SERVICE/
+     - oc rollout restart deployment $RELEASE-$CHART
+     - oc get all | grep $RELEASE
+   parallel:
+    matrix:
+      - SERVICE: "epay_transaction_service"
+        NAMESPACE: "dev-transaction"
+        CHART: "transactionservice"
+        RELEASE: "txn"
+        ENVIRONMENT: "dev"
+      - SERVICE: "epay_admin_service"
+        NAMESPACE: "dev-admin"
+        CHART: "adminservice"
+        RELEASE: "admin"
+        ENVIRONMENT: "dev"
+     # - SERVICE: "epay_admin_service_preprod"
+     #   NAMESPACE: "devops-admin"
+     #   CHART: "adminservice"
+     #   RELEASE: "admin"
+     #   ENVIRONMENT: "dev"
+      - SERVICE: "epay_key_managment"
+        NAMESPACE: "dev-kms"
+        CHART: "kmsservice"
+        RELEASE: "kms"
+        ENVIRONMENT: "dev"
+      - SERVICE: "epay_merchant_service"
+        NAMESPACE: "dev-merchant"
+        CHART: "merchantservice"
+        RELEASE: "merchant"
+        ENVIRONMENT: "dev"
+      - SERVICE: "epay_payment_service"
+        NAMESPACE: "dev-transaction"
+        CHART: "paymentservice"
+        RELEASE: "payment"
+        ENVIRONMENT: "dev"
+      - SERVICE: "epay_stubs_service"
+        NAMESPACE: "dev-transaction"
+        CHART: "stubsservice"
+        RELEASE: "stubs"
+        ENVIRONMENT: "dev"
+      - SERVICE: "epay_reports_service"
+        NAMESPACE: "dev-merchant"
+        CHART: "reportservice"
+        RELEASE: "report"
+        ENVIRONMENT: "dev"
+      - SERVICE: "epay_refund_service"
+        NAMESPACE: "dev-rns"
+        CHART: "refundservice"
+        RELEASE: "refund"
+        ENVIRONMENT: "dev"
+      - SERVICE: "epay_sftp_service"
+        NAMESPACE: "dev-rns"
+        CHART: "sftpservice"
+        RELEASE: "sftp"
+        ENVIRONMENT: "dev"
+      - SERVICE: "epay_recon_settlement_service"
+        NAMESPACE: "dev-rns"
+        CHART: "reconsettlementservice"
+        RELEASE: "rns"
+        ENVIRONMENT: "dev"
+      - SERVICE: epay_merchant_fe
+        NAMESPACE: dev-frontend
+        CHART: merchant-frontend
+        RELEASE: merchantfe
+        ENVIRONMENT: dev
+      - SERVICE: epay_transaction_fe
+        NAMESPACE: dev-frontend
+        CHART: transaction-frontend
+        RELEASE: transactionfe
+        ENVIRONMENT: dev
+      - SERVICE: java-utility-api-simulator
+        NAMESPACE: dev-simulators
+        CHART: javautilityapisimulator
+        RELEASE: javasimulator
+        ENVIRONMENT: dev
+      - SERVICE: merchant-api-simulator-nodejs
+        NAMESPACE: dev-simulators
+        CHART: merchant-api-simulator-nodejs
+        RELEASE: nodejssimulator
+        ENVIRONMENT: dev
+      - SERVICE: merchant-api-simulator-python
+        NAMESPACE: dev-simulators
+        CHART: merchant-api-simulator-python
+        RELEASE: pythonsimulator
+        ENVIRONMENT: dev
+      - SERVICE: merchant-api-simulator-dotnet
+        NAMESPACE: dev-simulators
+        CHART: merchant-api-simulator-dotnet
+        RELEASE: dotnetsimulator
+        ENVIRONMENT: dev 
+      - SERVICE: merchant-api-simulator-php
+        NAMESPACE: dev-simulators
+        CHART: merchant-api-simulator-php
+        RELEASE: phpsimulator
+        ENVIRONMENT: dev 
+      - SERVICE: epay_gateway_pooling
+        NAMESPACE: dev-offline-jobs
+        CHART: gatewaypooling
+        RELEASE: pooling
+        ENVIRONMENT: dev  
+      - SERVICE: epay_order_hash
+        NAMESPACE: dev-simulators
+        CHART: orderhash
+        RELEASE: orderhash
+        ENVIRONMENT: dev    
+      - SERVICE: "epay_transaction_service"
+        NAMESPACE: "sit-transaction"
+        CHART: "transactionservice"
+        RELEASE: "txn"
+        ENVIRONMENT: "sit"
+      - SERVICE: "epay_admin_service"
+        NAMESPACE: "sit-admin"
+        CHART: "adminservice"
+        RELEASE: "admin"
+        ENVIRONMENT: "sit"
+      - SERVICE: "epay_key_managment"
+        NAMESPACE: "sit-kms"
+        CHART: "kmsservice"
+        RELEASE: "kms"
+        ENVIRONMENT: "sit"
+      - SERVICE: "epay_merchant_service"
+        NAMESPACE: "sit-merchant"
+        CHART: "merchantservice"
+        RELEASE: "merchant"
+        ENVIRONMENT: "sit"
+      - SERVICE: "epay_payment_service"
+        NAMESPACE: "sit-transaction"
+        CHART: "paymentservice"
+        RELEASE: "payment"
+        ENVIRONMENT: "sit"
+      - SERVICE: "epay_reports_service"
+        NAMESPACE: "sit-merchant"
+        CHART: "reportservice"
+        RELEASE: "report"
+        ENVIRONMENT: "sit"
+      - SERVICE: epay_merchant_fe
+        NAMESPACE: sit-frontend
+        CHART: merchant-frontend
+        RELEASE: merchantfe
+        ENVIRONMENT: sit
+      - SERVICE: epay_transaction_fe
+        NAMESPACE: sit-frontend
+        CHART: transaction-frontend
+        RELEASE: transactionfe
+        ENVIRONMENT: sit
+      - SERVICE: java-utility-api-simulator
+        NAMESPACE: sit-simulators
+        CHART: javautilityapisimulator
+        RELEASE: javasimulator
+        ENVIRONMENT: sit 
+      - SERVICE: merchant-api-simulator-nodejs
+        NAMESPACE: sit-simulators
+        CHART: merchant-api-simulator-nodejs
+        RELEASE: nodejssimulator
+        ENVIRONMENT: sit 
+      - SERVICE: "epay_transaction_service"
+        NAMESPACE: "uat-transaction"
+        CHART: "transactionservice"
+        RELEASE: "txn"
+        ENVIRONMENT: "uat"
+      - SERVICE: "epay_admin_service"
+        NAMESPACE: "uat-admin"
+        CHART: "adminservice"
+        RELEASE: "admin"
+        ENVIRONMENT: "uat"
+      - SERVICE: "epay_key_managment"
+        NAMESPACE: "uat-kms"
+        CHART: "kmsservice"
+        RELEASE: "kms"
+        ENVIRONMENT: "uat"
+      - SERVICE: "epay_merchant_service"
+        NAMESPACE: "uat-merchant"
+        CHART: "merchantservice"
+        RELEASE: "merchant"
+        ENVIRONMENT: "uat"
+      - SERVICE: "epay_payment_service"
+        NAMESPACE: "uat-transaction"
+        CHART: "paymentservice"
+        RELEASE: "payment"
+        ENVIRONMENT: "uat"
+      - SERVICE: "epay_reports_service"
+        NAMESPACE: "uat-merchant"
+        CHART: "reportservice"
+        RELEASE: "report"
+        ENVIRONMENT: "uat"
+      - SERVICE: epay_merchant_fe
+        NAMESPACE: uat-frontend
+        CHART: merchant-frontend
+        RELEASE: merchantfe
+        ENVIRONMENT: uat
+      - SERVICE: epay_transaction_fe
+        NAMESPACE: uat-frontend
+        CHART: transaction-frontend
+        RELEASE: transactionfe
+        ENVIRONMENT: uat
+      - SERVICE: java-utility-api-simulator
+        NAMESPACE: uat-simulators
+        CHART: javautilityapisimulator
+        RELEASE: javasimulator
+        ENVIRONMENT: uat  
+      - SERVICE: "epay_admin_service"
+        NAMESPACE: "preprod-admin"
+        CHART: "adminservice"
+        RELEASE: "admin"
+        ENVIRONMENT: "pre-prod"     
+   rules:
+    - if: $SERVICE_NAME == $SERVICE && $ENV == $ENVIRONMENT && $CI_PIPELINE_SOURCE == "pipeline"
