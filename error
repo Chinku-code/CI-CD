@@ -1,51 +1,325 @@
-FROM registry.dev.sbiepay.sbi:8443/ubi9/gradle-8.9-jdk-21:v6
+ci-templates
+templates
+mobile
+android.yml
 
-#Environment setup
-ENV LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8 \
-    TZ=Asia/Kolkata \
-    ANDROID_HOME=/opt/android-sdk \
-    PATH=$PATH:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools
+this is the file path and
 
-# Root privileges
-USER root
+this tha android.yaml
 
-# Install tools (avoid curl conflict)
-RUN microdnf install -y wget unzip git which bash shadow-utils && \
+include:
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/build/sdk.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/test/sdk.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/sast/sast.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/sast/fortify.sast.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/release/version.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/release/release.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/build/podman.container.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/deploy/deployment.yml'
 
-    microdnf clean all
+stages:
+- build
+- test
+- sast
+- hp-fortify
+- release
+- dockerbuild
+- deploy
 
-# Install Android SDK Command-line tools (✅ fixed folder path)
-RUN mkdir -p $ANDROID_HOME/cmdline-tools && \
-
-    cd $ANDROID_HOME/cmdline-tools && \
-    wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip && \
-    unzip -q commandlinetools-linux-11076708_latest.zip && \
-    rm commandlinetools-linux-11076708_latest.zip && \
-    mv cmdline-tools latest
-
-# Accept licenses & install platform tools
-RUN yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true && \
-
-    $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-        "platform-tools" \
-        "platforms;android-35" \
-        "build-tools;35.0.0"
-
-# Prepare workspace
-WORKDIR /workspace
-
-# Default command
-CMD ["/bin/bash"]
+variables:
+  CI_TEMPLATE_REGISTRY_HOST: "registry.dev.sbiepay.sbi:8443"
+  CI_TEMPLATE_REGISTRY_HOST_PREPROD: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi"
+  CI_TEMPLATE_REGISTRY_HOST_PROD: "registry.prod.epay.sbi:8443"
+  CI_TEMPLATE_REGISTRY_HOST_PRODDR: "epayproddr-registry-quay-quay-enterprise.apps.dr.prod.epay.sbi"
+  CI_TEMPLATE_REGISTRY_HOST_PRODDC: "proddc-registry-route-quay-enterprise.apps.dc.prod.epay.sbi"
+  GIT_STRATEGY: clone
+  CI_USERNAME: "gitlab-ci-token"
+  RELEASE_NAME: null
+  CHART_NAME: null
+  IMAGE_NAME: "library/$CHART_NAME"
 
 
+.rules:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)|(develop)|(release)(\/.+)*$/'
+    - if: '$CI_COMMIT_BRANCH =~ /^(main)|(develop)|(release)(\/.+)*$/'
+    - when: never
+     
+build:
+  extends: 
+    - .build
+    - .rules
+
+test:
+  extends: 
+    - .test
+    - .rules
+
+sast:
+  extends:
+    - .sast
+    - .rules
+
+hp-fortify:
+  extends:
+    - .HPFortify
+    - .rules
+
+tag:
+  extends:
+    - .tag
+
+dockerbuild:
+  extends:
+    - .dockerbuild
+    - .rules
+
+deploy-dev:
+  variables:
+    ENV: dev
+    SERVICE_NAME: $CI_PROJECT_NAME
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(develop)$/
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(develop)$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-sit:
+  variables:
+    ENV: sit
+    SERVICE_NAME: $CI_PROJECT_NAME
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-uat:
+  variables:
+    ENV: uat
+    SERVICE_NAME: $CI_PROJECT_NAME
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-int:
+  variables:
+    ENV: int
+    SERVICE_NAME: $CI_PROJECT_NAME
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
 
 
+promote-image-pre-prod:
+  stage: deploy
+  variables:
+    REGISTRY_USERNAME: $PREPROD_REGISTRY_USERNAME
+    REGISTRY_PASSWORD: $PREPROD_REGISTRY_PASSWORD
+    TARGET_IMAGE_NAME: "microservices/$CHART_NAME"
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - podman login -u microservices+preprod -p Y37PK8H33NIJVND7HA68OJQZX776SKHPP81XI7BQ94JH92UAJ1GVA144GPYC9PGU epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
+    #- podman login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $CI_TEMPLATE_REGISTRY_HOST_PREPROD --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION $CI_TEMPLATE_REGISTRY_HOST_PREPROD/$TARGET_IMAGE_NAME:$VERSION
+    - podman push $CI_TEMPLATE_REGISTRY_HOST_PREPROD/$TARGET_IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
 
-errors 
+deploy-pre-prod:
+  variables:
+    ENV: pre-prod
+    SERVICE_NAME: $CI_PROJECT_NAME
+    DEPLOYMENT_BRANCH: main
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
 
-Pipeline #46988 failed
-Pipeline failed for 6235e768
-5 minutes ago
-This GitLab CI configuration is invalid: Project `epay/devops/ci-templates` file `ci/build/sdk.yml` does not exist!.
-Learn more
+deploy-perf:
+  variables:
+    ENV: perf
+    SERVICE_NAME: $CI_PROJECT_NAME
+    DEPLOYMENT_BRANCH: main
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+promote-image-pre-prod-dc:
+  stage: deploy
+  variables:
+    REGISTRY_USERNAME: $PREPROD_DC_REGISTRY_USERNAME
+    REGISTRY_PASSWORD: $PREPROD_DC_REGISTRY_PASSWORD
+    TARGET_IMAGE_NAME: "microservices/$CHART_NAME"
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - podman login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $CI_TEMPLATE_REGISTRY_HOST_PREPROD --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION $CI_TEMPLATE_REGISTRY_HOST_PREPROD/$TARGET_IMAGE_NAME:$VERSION
+    - podman push $CI_TEMPLATE_REGISTRY_HOST_PREPROD/$TARGET_IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-pre-prod-dc:
+  variables:
+    ENV: pre-prod-dc
+    SERVICE_NAME: $CI_PROJECT_NAME
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+promote-image-prod-dr:
+  stage: deploy
+  variables:
+    REGISTRY_USERNAME: $PROD_DR_REGISTRY_USERNAME
+    REGISTRY_PASSWORD: $PROD_DR_REGISTRY_PASSWORD
+    TARGET_IMAGE_NAME: "microservices/$CHART_NAME"
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    #- podman login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $CI_TEMPLATE_REGISTRY_HOST_PRODDR --tls-verify=false
+    - podman login -u='microservices+microservices_prod_dr' -p='DC91U2U38YMH21BLBXYTY8JLNNYXH0GZT7LQ6B4261IR5LJPEXAE7EGRC76866XW' epayproddr-registry-quay-quay-enterprise.apps.dr.prod.epay.sbi --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION $CI_TEMPLATE_REGISTRY_HOST_PRODDR/$TARGET_IMAGE_NAME:$VERSION
+    - podman push $CI_TEMPLATE_REGISTRY_HOST_PRODDR/$TARGET_IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-prod-dr:
+  variables:
+    ENV: prod-dr
+    SERVICE_NAME: $CI_PROJECT_NAME
+    DEPLOYMENT_BRANCH: main
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+promote-image-prod-dc:
+  stage: deploy
+  variables:
+    REGISTRY_USERNAME: $PROD_DC_REGISTRY_USERNAME
+    REGISTRY_PASSWORD: $PROD_DC_REGISTRY_PASSWORD
+    TARGET_IMAGE_NAME: "microservices/$CHART_NAME"
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - echo "$REGISTRY_USERNAME:$REGISTRY_PASSWORD"
+    - podman login -u='microservices+microservices' -p='VY62CTW20B8V2TGIO0WNZGAZXDQCZUGN5F83VHY2ORR4MJRKRPO4DAPFIZ97LRYR' proddc-registry-route-quay-enterprise.apps.dc.prod.epay.sbi --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION $CI_TEMPLATE_REGISTRY_HOST_PRODDC/$TARGET_IMAGE_NAME:$VERSION
+    - podman push $CI_TEMPLATE_REGISTRY_HOST_PRODDC/$TARGET_IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-prod-dc:
+  variables:
+    ENV: prod-dc
+    SERVICE_NAME: $CI_PROJECT_NAME
+    DEPLOYMENT_BRANCH: main
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - when: never
+
