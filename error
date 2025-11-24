@@ -1,217 +1,302 @@
-.helm_update:
-   stage: deploy
-   image: registry.dev.sbiepay.sbi:8443/ubi9/ochelm:03122024
-   script:
-     - oc login "$OPENSHIFT_SERVER" --token="$OPENSHIFT_TOKEN" --insecure-skip-tls-verify
-     - oc project $NAMESPACE
-     - cd ./$ENV/charts/
-     - sed -i "s/\(tag:\).*/\1 \"${VERSION}\"/" $SERVICE/values.yaml
-     - helm upgrade --install $RELEASE -f $SERVICE/values.yaml   $SERVICE/
-     - oc rollout restart deployment $RELEASE-$CHART
-     - oc get all | grep $RELEASE
-   parallel:
-    matrix:
-      - SERVICE: "epay_transaction_service"
-        NAMESPACE: "dev-transaction"
-        CHART: "transactionservice"
-        RELEASE: "txn"
-        ENVIRONMENT: "dev"
-      - SERVICE: "epay_admin_service"
-        NAMESPACE: "dev-admin"
-        CHART: "adminservice"
-        RELEASE: "admin"
-        ENVIRONMENT: "dev"
-     # - SERVICE: "epay_admin_service_preprod"
-     #   NAMESPACE: "devops-admin"
-     #   CHART: "adminservice"
-     #   RELEASE: "admin"
-     #   ENVIRONMENT: "dev"
-      - SERVICE: "epay_key_managment"
-        NAMESPACE: "dev-kms"
-        CHART: "kmsservice"
-        RELEASE: "kms"
-        ENVIRONMENT: "dev"
-      - SERVICE: "epay_merchant_service"
-        NAMESPACE: "dev-merchant"
-        CHART: "merchantservice"
-        RELEASE: "merchant"
-        ENVIRONMENT: "dev"
-      - SERVICE: "epay_payment_service"
-        NAMESPACE: "dev-transaction"
-        CHART: "paymentservice"
-        RELEASE: "payment"
-        ENVIRONMENT: "dev"
-      - SERVICE: "epay_stubs_service"
-        NAMESPACE: "dev-transaction"
-        CHART: "stubsservice"
-        RELEASE: "stubs"
-        ENVIRONMENT: "dev"
-      - SERVICE: "epay_reports_service"
-        NAMESPACE: "dev-merchant"
-        CHART: "reportservice"
-        RELEASE: "report"
-        ENVIRONMENT: "dev"
-      - SERVICE: "epay_refund_service"
-        NAMESPACE: "dev-rns"
-        CHART: "refundservice"
-        RELEASE: "refund"
-        ENVIRONMENT: "dev"
-      - SERVICE: "epay_sftp_service"
-        NAMESPACE: "dev-rns"
-        CHART: "sftpservice"
-        RELEASE: "sftp"
-        ENVIRONMENT: "dev"
-      - SERVICE: "epay_recon_settlement_service"
-        NAMESPACE: "dev-rns"
-        CHART: "reconsettlementservice"
-        RELEASE: "rns"
-        ENVIRONMENT: "dev"
-      - SERVICE: epay_merchant_fe
-        NAMESPACE: dev-frontend
-        CHART: merchant-frontend
-        RELEASE: merchantfe
-        ENVIRONMENT: dev
-      - SERVICE: epay_transaction_fe
-        NAMESPACE: dev-frontend
-        CHART: transaction-frontend
-        RELEASE: transactionfe
-        ENVIRONMENT: dev
-      - SERVICE: java-utility-api-simulator
-        NAMESPACE: dev-simulators
-        CHART: javautilityapisimulator
-        RELEASE: javasimulator
-        ENVIRONMENT: dev
-      - SERVICE: merchant-api-simulator-nodejs
-        NAMESPACE: dev-simulators
-        CHART: merchant-api-simulator-nodejs
-        RELEASE: nodejssimulator
-        ENVIRONMENT: dev
-      - SERVICE: merchant-api-simulator-python
-        NAMESPACE: dev-simulators
-        CHART: merchant-api-simulator-python
-        RELEASE: pythonsimulator
-        ENVIRONMENT: dev
-      - SERVICE: merchant-api-simulator-dotnet
-        NAMESPACE: dev-simulators
-        CHART: merchant-api-simulator-dotnet
-        RELEASE: dotnetsimulator
-        ENVIRONMENT: dev 
-      - SERVICE: merchant-api-simulator-php
-        NAMESPACE: dev-simulators
-        CHART: merchant-api-simulator-php
-        RELEASE: phpsimulator
-        ENVIRONMENT: dev 
-      - SERVICE: epay_gateway_pooling
-        NAMESPACE: dev-offline-jobs
-        CHART: gatewaypooling
-        RELEASE: pooling
-        ENVIRONMENT: dev  
-      - SERVICE: epay_order_hash
-        NAMESPACE: dev-simulators
-        CHART: orderhash
-        RELEASE: orderhash
-        ENVIRONMENT: dev    
-      - SERVICE: "epay_transaction_service"
-        NAMESPACE: "sit-transaction"
-        CHART: "transactionservice"
-        RELEASE: "txn"
-        ENVIRONMENT: "sit"
-      - SERVICE: "epay_admin_service"
-        NAMESPACE: "sit-admin"
-        CHART: "adminservice"
-        RELEASE: "admin"
-        ENVIRONMENT: "sit"
-      - SERVICE: "epay_key_managment"
-        NAMESPACE: "sit-kms"
-        CHART: "kmsservice"
-        RELEASE: "kms"
-        ENVIRONMENT: "sit"
-      - SERVICE: "epay_merchant_service"
-        NAMESPACE: "sit-merchant"
-        CHART: "merchantservice"
-        RELEASE: "merchant"
-        ENVIRONMENT: "sit"
-      - SERVICE: "epay_payment_service"
-        NAMESPACE: "sit-transaction"
-        CHART: "paymentservice"
-        RELEASE: "payment"
-        ENVIRONMENT: "sit"
-      - SERVICE: "epay_reports_service"
-        NAMESPACE: "sit-merchant"
-        CHART: "reportservice"
-        RELEASE: "report"
-        ENVIRONMENT: "sit"
-      - SERVICE: epay_merchant_fe
-        NAMESPACE: sit-frontend
-        CHART: merchant-frontend
-        RELEASE: merchantfe
-        ENVIRONMENT: sit
-      - SERVICE: epay_transaction_fe
-        NAMESPACE: sit-frontend
-        CHART: transaction-frontend
-        RELEASE: transactionfe
-        ENVIRONMENT: sit
-      - SERVICE: java-utility-api-simulator
-        NAMESPACE: sit-simulators
-        CHART: javautilityapisimulator
-        RELEASE: javasimulator
-        ENVIRONMENT: sit 
-      - SERVICE: merchant-api-simulator-nodejs
-        NAMESPACE: sit-simulators
-        CHART: merchant-api-simulator-nodejs
-        RELEASE: nodejssimulator
-        ENVIRONMENT: sit 
-      - SERVICE: "epay_transaction_service"
-        NAMESPACE: "uat-transaction"
-        CHART: "transactionservice"
-        RELEASE: "txn"
-        ENVIRONMENT: "uat"
-      - SERVICE: "epay_admin_service"
-        NAMESPACE: "uat-admin"
-        CHART: "adminservice"
-        RELEASE: "admin"
-        ENVIRONMENT: "uat"
-      - SERVICE: "epay_key_managment"
-        NAMESPACE: "uat-kms"
-        CHART: "kmsservice"
-        RELEASE: "kms"
-        ENVIRONMENT: "uat"
-      - SERVICE: "epay_merchant_service"
-        NAMESPACE: "uat-merchant"
-        CHART: "merchantservice"
-        RELEASE: "merchant"
-        ENVIRONMENT: "uat"
-      - SERVICE: "epay_payment_service"
-        NAMESPACE: "uat-transaction"
-        CHART: "paymentservice"
-        RELEASE: "payment"
-        ENVIRONMENT: "uat"
-      - SERVICE: "epay_reports_service"
-        NAMESPACE: "uat-merchant"
-        CHART: "reportservice"
-        RELEASE: "report"
-        ENVIRONMENT: "uat"
-      - SERVICE: epay_merchant_fe
-        NAMESPACE: uat-frontend
-        CHART: merchant-frontend
-        RELEASE: merchantfe
-        ENVIRONMENT: uat
-      - SERVICE: epay_transaction_fe
-        NAMESPACE: uat-frontend
-        CHART: transaction-frontend
-        RELEASE: transactionfe
-        ENVIRONMENT: uat
-      - SERVICE: java-utility-api-simulator
-        NAMESPACE: uat-simulators
-        CHART: javautilityapisimulator
-        RELEASE: javasimulator
-        ENVIRONMENT: uat  
-      - SERVICE: "epay_admin_service"
-        NAMESPACE: "preprod-admin"
-        CHART: "adminservice"
-        RELEASE: "admin"
-        ENVIRONMENT: "pre-prod"     
-   rules:
-    - if: $SERVICE_NAME == $SERVICE && $ENV == $ENVIRONMENT && $CI_PIPELINE_SOURCE == "pipeline"
+include:
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'templates/fe/html.yml'
 
 
+variables:
+  RELEASE_NAME: merchant-int  
+  CHART_NAME: epay_merchantintegration_fe
+gitlab ci___
+
+
+template/fe/html.yaml____
+
+ include:
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/sast/sast.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/sast/fortify.sast.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/release/version.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/release/release.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/build/podman.container.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/deploy/deployment.yml'
+
+stages:
+- test
+- sast
+- hp-fortify
+- release
+- dockerbuild
+- deploy
+
+variables:
+  CI_TEMPLATE_REGISTRY_HOST: "registry.dev.sbiepay.sbi:8443"
+  CI_TEMPLATE_REGISTRY_HOST_PREPROD: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi"
+  CI_TEMPLATE_REGISTRY_HOST_PROD: "registry.prod.epay.sbi:8443"
+  CI_TEMPLATE_REGISTRY_HOST_PRODDR: "epayproddr-registry-quay-quay-enterprise.apps.dr.prod.epay.sbi"
+  CI_TEMPLATE_REGISTRY_HOST_PRODDC: "proddc-registry-route-quay-enterprise.apps.dc.prod.epay.sbi"
+  GIT_STRATEGY: clone
+  CI_USERNAME: "gitlab-ci-token"
+  RELEASE_NAME: null
+  CHART_NAME: null
+  IMAGE_NAME: "ubi9/$CHART_NAME"
+
+.rules:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)|(develop)|(release)(\/.+)*$/'
+    - if: '$CI_COMMIT_BRANCH =~ /^(main)|(develop)|(release)(\/.+)*$/'
+    - when: never
+
+# build:
+#   extends: 
+#     - .build
+#     - .rules
+
+
+sast:
+  extends:
+    - .sast
+    - .rules
+
+
+hp-fortify:
+  extends:
+    - .HPFortify
+    - .rules
+
+tag:
+  extends:
+    - .tag
+
+# Docker build jobs for each environment
+
+dockerbuild:
+  extends:
+    - .dockerbuild
+    - .rules
+
+# Deploy jobs with proper dependencies
+deploy-dev:
+  variables:
+    ENV: dev
+    SERVICE_NAME: $CI_PROJECT_NAME
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(develop)$/
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(develop)$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-sit:
+  variables:
+    ENV: sit
+    SERVICE_NAME: $CI_PROJECT_NAME
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-uat:
+  variables:
+    ENV: uat
+    SERVICE_NAME: $CI_PROJECT_NAME
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+
+promote-image-pre-prod:
+  stage: deploy
+  variables:
+    REGISTRY_USERNAME: $PREPROD_REGISTRY_USERNAME
+    REGISTRY_PASSWORD: $PREPROD_REGISTRY_PASSWORD
+    TARGET_IMAGE_NAME: "microservices/$CHART_NAME"
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - podman login -u microservices+preprod -p Y37PK8H33NIJVND7HA68OJQZX776SKHPP81XI7BQ94JH92UAJ1GVA144GPYC9PGU epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
+    #- podman login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $CI_TEMPLATE_REGISTRY_HOST_PREPROD --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION $CI_TEMPLATE_REGISTRY_HOST_PREPROD/$TARGET_IMAGE_NAME:$VERSION
+    - podman push $CI_TEMPLATE_REGISTRY_HOST_PREPROD/$TARGET_IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-pre-prod:
+  variables:
+    ENV: pre-prod
+    SERVICE_NAME: $CI_PROJECT_NAME
+    DEPLOYMENT_BRANCH: main
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-perf:
+  variables:
+    ENV: perf
+    SERVICE_NAME: $CI_PROJECT_NAME
+    DEPLOYMENT_BRANCH: main
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+promote-image-pre-prod-dc:
+  stage: deploy
+  variables:
+    REGISTRY_USERNAME: $PREPROD_DC_REGISTRY_USERNAME
+    REGISTRY_PASSWORD: $PREPROD_DC_REGISTRY_PASSWORD
+    TARGET_IMAGE_NAME: "microservices/$CHART_NAME"
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - podman login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $CI_TEMPLATE_REGISTRY_HOST_PREPROD --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION $CI_TEMPLATE_REGISTRY_HOST_PREPROD/$TARGET_IMAGE_NAME:$VERSION
+    - podman push $CI_TEMPLATE_REGISTRY_HOST_PREPROD/$TARGET_IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-pre-prod-dc:
+  variables:
+    ENV: pre-prod-dc
+    SERVICE_NAME: $CI_PROJECT_NAME
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+promote-image-prod-dr:
+  stage: deploy
+  variables:
+    REGISTRY_USERNAME: $PROD_DR_REGISTRY_USERNAME
+    REGISTRY_PASSWORD: $PROD_DR_REGISTRY_PASSWORD
+    TARGET_IMAGE_NAME: "microservices/$CHART_NAME"
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    #- podman login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $CI_TEMPLATE_REGISTRY_HOST_PRODDR --tls-verify=false
+    - podman login -u='microservices+microservices' -p='27WT1N9G0GSIF7RMVD84W1BLAUFF3FRZ6H42HZL47MXMR51U3DAWF9NSLVEJYDHS' epayproddr-registry-quay-quay-enterprise.apps.dr.prod.epay.sbi --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION $CI_TEMPLATE_REGISTRY_HOST_PRODDR/$TARGET_IMAGE_NAME:$VERSION
+    - podman push $CI_TEMPLATE_REGISTRY_HOST_PRODDR/$TARGET_IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-prod-dr:
+  variables:
+    ENV: prod-dr
+    SERVICE_NAME: $CI_PROJECT_NAME
+    DEPLOYMENT_BRANCH: main
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+promote-image-prod-dc:
+  stage: deploy
+  variables:
+    REGISTRY_USERNAME: $PROD_DC_REGISTRY_USERNAME
+    REGISTRY_PASSWORD: $PROD_DC_REGISTRY_PASSWORD
+    TARGET_IMAGE_NAME: "microservices/$CHART_NAME"
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - echo "$REGISTRY_USERNAME:$REGISTRY_PASSWORD"
+    - podman login -u='microservices+microservices' -p='VY62CTW20B8V2TGIO0WNZGAZXDQCZUGN5F83VHY2ORR4MJRKRPO4DAPFIZ97LRYR' proddc-registry-route-quay-enterprise.apps.dc.prod.epay.sbi --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION $CI_TEMPLATE_REGISTRY_HOST_PRODDC/$TARGET_IMAGE_NAME:$VERSION
+    - podman push $CI_TEMPLATE_REGISTRY_HOST_PRODDC/$TARGET_IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - when: never
+
+deploy-prod-dc:
+  variables:
+    ENV: prod-dc
+    SERVICE_NAME: $CI_PROJECT_NAME
+    DEPLOYMENT_BRANCH: main
+    VERSION: $VERSION
+  extends:
+    - .trigger_cd
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main)$/
+      when: manual
+      allow_failure: true
+    - when: never
