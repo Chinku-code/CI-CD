@@ -213,3 +213,5 @@
         ENVIRONMENT: "pre-prod"     
    rules:
     - if: $SERVICE_NAME == $SERVICE && $ENV == $ENVIRONMENT && $CI_PIPELINE_SOURCE == "pipeline"
+
+
