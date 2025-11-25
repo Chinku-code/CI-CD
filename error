@@ -1,12 +1,3 @@
-ci-templates
-templates
-mobile
-android.yml
-
-this is the file path and
-
-this tha android.yaml
-
 include:
   - project: 'epay/devops/ci-templates'
     ref: main
