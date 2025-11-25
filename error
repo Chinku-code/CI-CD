@@ -1,17 +1,229 @@
-dev: merchantfe and transactionfe
-dev : registry.dev.sbiepay.sbi:8443/ubi9/
+--------------------------HelmV2--------------------------------
+include:
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'cd/helm/services.yml'
 
-int: merchantfe and transactionfe
-int : registry.dev.sbiepay.sbi:8443/library/
+stages:
+  - validate
+  - deploy
+  - verify
 
-perf: merchantfe and transactionfe
-perf: epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/
+variables:
+  # Cluster endpoints
+  DEV_CLUSTER: "https://api.dev.sbiepay.sbi:6443"
+  PREPROD_CLUSTER: "https://api.preprod.epay.sbi:6443"
 
-prepord: merchantfe and transactionfe
-prepord: epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/
+  # Environment-based image registries (YOUR VALUES)
+  DEV_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9"
+  INT_REGISTRY: "registry.dev.sbiepay.sbi:8443/library"
+  SIT_REGISTRY: "registry.dev.sbiepay.sbi:8443/library"
+  UAT_REGISTRY: "registry.dev.sbiepay.sbi:8443/library"
+  PERF_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe"
+  PREPROD_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe"
 
-sit: merchantfe and transactionfe
-sit : registry.dev.sbiepay.sbi:8443/library/
+  # Pipeline settings
+  SERVICE_NAME: ""
+  ENV: ""
+  VERSION: ""
 
-uat: merchantfe and transactionfe
-uat : registry.dev.sbiepay.sbi:8443/library/
+  HELM_ATOMIC: "false"
+  HELM_HISTORY_MAX: "10"
+  DEPLOYMENT_TIMEOUT: "15m"
+  HEALTH_CHECK_TIMEOUT: "5m"
+  HEALTH_CHECK_INTERVAL: "10s"
+  HEALTH_CHECK_SUCCESS_STATUS: "UP"
+
+  CHART_BASE_PATH: "."
+  GIT_STRATEGY: clone
+  GIT_DEPTH: 0
+
+############################################
+# VALIDATION LOGIC
+############################################
+.validate_variables:
+  before_script:
+    - |
+      set -eo pipefail
+      REPO_ROOT=$(pwd)
+
+      # 1. Pipeline trigger mode (promotion)
+      if [ "$CI_PIPELINE_SOURCE" = "pipeline" ]; then
+        if [ -z "$SERVICE_NAME" ] || [ -z "$ENV" ]; then
+          echo "❌ SERVICE_NAME or ENV missing in pipeline trigger"
+          exit 1
+        fi
+        echo "Trigger Deploy: $SERVICE_NAME → $ENV"
+        exit 0
+      fi
+
+      # 2. Auto-detection from changed charts
+      git remote set-url origin https://gitlab-ci-token:$GIT_PAT@gitlab.epay.sbi/$CI_PROJECT_PATH.git
+      git fetch --all
+
+      DIFF=$(git diff --name-only "$CI_COMMIT_BEFORE_SHA" "$CI_COMMIT_SHA")
+      CHANGED=$(echo "$DIFF" | grep -oE '(dev|int|sit|uat|perf|pre-prod)/charts/[^/]+' | head -1)
+
+      if [ -n "$CHANGED" ]; then
+        ENV=$(echo "$CHANGED" | cut -d'/' -f1)
+        SERVICE_NAME=$(echo "$CHANGED" | cut -d'/' -f3)
+        echo "Detected: SERVICE=$SERVICE_NAME ENV=$ENV"
+      else
+        echo "No chart change → skip"
+        exit 0
+      fi
+
+############################################
+# OPENSHIFT LOGIN BASED ON ENV
+############################################
+.openshift_login:
+  before_script:
+    - |
+      set -eo pipefail
+
+      case "$ENV" in
+        dev|int|sit|uat)
+          SERVER="$DEV_CLUSTER"
+          TOKEN="$DEV_TOKEN"
+          ;;
+        perf|pre-prod)
+          SERVER="$PREPROD_CLUSTER"
+          TOKEN="$PREPROD_TOKEN"
+          ;;
+        *)
+          echo "❌ Unsupported ENV: $ENV"
+          exit 1
+      esac
+
+      echo "Logging in to cluster: $SERVER"
+      oc login "$SERVER" --token="$TOKEN" --insecure-skip-tls-verify
+
+############################################
+# SERVICE VALIDATION (services.yml lookup)
+############################################
+validate_service:
+  stage: validate
+  image: registry.dev.sbiepay.sbi:8443/library/rhelgit:latest
+  extends:
+    - .validate_variables
+  script:
+    - |
+      set -eo pipefail
+
+      echo "$SERVICES_CONFIG" > /tmp/services.yml
+
+      SERVICE_NAMESPACE=$(yq e ".[] | select(.namespace == \"frontend\") | .services[] | select(.name == \"$SERVICE_NAME\") | .namespace" /tmp/services.yml)
+      RELEASE_NAME=$(yq e ".[] | select(.namespace == \"frontend\") | .services[] | select(.name == \"$SERVICE_NAME\") | .release" /tmp/services.yml)
+      CHART_NAME=$(yq e ".[] | select(.namespace == \"frontend\") | .services[] | select(.name == \"$SERVICE_NAME\") | .chart" /tmp/services.yml)
+      HEALTH=$(yq e ".[] | select(.namespace == \"frontend\") | .services[] | select(.name == \"$SERVICE_NAME\") | .health_check" /tmp/services.yml)
+
+      if [ -z "$CHART_NAME" ]; then
+        echo "❌ Service not found in services.yml"
+        exit 1
+      fi
+
+      KUBE_NAMESPACE="${ENV}-${SERVICE_NAMESPACE}"
+      CHART_PATH="${ENV}/charts/${CHART_NAME}"
+
+      echo "
+SERVICE_NAMESPACE=$SERVICE_NAMESPACE
+RELEASE_NAME=$RELEASE_NAME
+CHART_NAME=$CHART_NAME
+KUBE_NAMESPACE=$KUBE_NAMESPACE
+CHART_PATH=$CHART_PATH
+HEALTH_CHECK_ENDPOINT=$HEALTH
+" > build.env
+
+      echo "Validation OK: $SERVICE_NAME → $ENV"
+
+  artifacts:
+    reports:
+      dotenv: build.env
+
+############################################
+# DEPLOY (HELM UPGRADE)
+############################################
+deploy:
+  stage: deploy
+  extends:
+    - .openshift_login
+  needs:
+    - validate_service
+  image:
+    name: registry.dev.sbiepay.sbi:8443/ubi9/ochelm:03122024
+    entrypoint: [""]
+
+  script:
+    - |
+      set -eo pipefail
+
+      # Determine environment registry
+      case "$ENV" in
+        dev)
+          IMAGE_REGISTRY="$DEV_REGISTRY"
+          ;;
+        int)
+          IMAGE_REGISTRY="$INT_REGISTRY"
+          ;;
+        sit)
+          IMAGE_REGISTRY="$SIT_REGISTRY"
+          ;;
+        uat)
+          IMAGE_REGISTRY="$UAT_REGISTRY"
+          ;;
+        perf)
+          IMAGE_REGISTRY="$PERF_REGISTRY"
+          ;;
+        pre-prod)
+          IMAGE_REGISTRY="$PREPROD_REGISTRY"
+          ;;
+      esac
+
+      echo "Using Registry: $IMAGE_REGISTRY"
+
+      # Determine image tag if not given
+      if [ -z "$VERSION" ]; then
+        VERSION="$(echo $CI_COMMIT_REF_NAME | sed 's/\//-/g')-$CI_COMMIT_SHORT_SHA"
+      fi
+
+      IMAGE_REPO="${IMAGE_REGISTRY}/${CHART_NAME}"
+      echo "Deploying image: $IMAGE_REPO:$VERSION"
+
+      if ! oc get namespace "$KUBE_NAMESPACE"; then
+        oc create namespace "$KUBE_NAMESPACE"
+      fi
+
+      HELM_CMD="helm upgrade --install $RELEASE_NAME $CHART_PATH \
+        --namespace $KUBE_NAMESPACE \
+        --set image.repository=$IMAGE_REPO \
+        --set image.tag=$VERSION \
+        --timeout $DEPLOYMENT_TIMEOUT \
+        --history-max $HELM_HISTORY_MAX"
+
+      echo "Running: $HELM_CMD"
+      eval "$HELM_CMD"
+
+############################################
+# VERIFY (ROLLBACK ON FAILURE)
+############################################
+verify:
+  stage: verify
+  extends:
+    - .openshift_login
+  needs:
+    - deploy
+  image:
+    name: registry.dev.sbiepay.sbi:8443/ubi9/ochelm:03122024
+    entrypoint: [""]
+
+  script:
+    - |
+      set -eo pipefail
+
+      if ! oc rollout status deployment/$RELEASE_NAME -n $KUBE_NAMESPACE --timeout=3m; then
+        echo "❌ Deployment failed → Rolling back…"
+        helm rollback "$RELEASE_NAME" -n "$KUBE_NAMESPACE"
+        exit 1
+      fi
+
+      echo "Deployment SUCCESS for $SERVICE_NAME → $ENV"
