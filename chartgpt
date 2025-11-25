@@ -1,0 +1,603 @@
+include:
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'cd/helm/services.yml'
+
+# Define stages
+stages:
+  - validate
+  - deploy
+  - verify
+
+# Common variables that can be overridden
+variables:
+  # OpenShift cluster configurations
+  DEV_CLUSTER: "https://api.dev.sbiepay.sbi:6443"
+  PREPROD_CLUSTER: "https://api.preprod.epay.sbi:6443"
+  PREPROD_DC_CLUSTER: "https://api.dcpreprod.epay.sbi:6443"
+  PROD_DR_CLUSTER: "https://api.dr.prod.epay.sbi:6443"
+  PROD_DC_CLUSTER: "https://api.dc.prod.epay.sbi:6443"
+
+  # Pipeline settings
+  SERVICE_NAME: ""
+  ENV: ""
+
+  # Helm settings
+  HELM_ATOMIC: "false"
+  HELM_HISTORY_MAX: "10"
+
+  # Deployment settings
+  DEPLOYMENT_TIMEOUT: "15m"
+  HEALTH_CHECK_TIMEOUT: "5m"
+  HEALTH_CHECK_INTERVAL: "10s"
+  HEALTH_CHECK_SUCCESS_STATUS: "UP"
+
+  # Image settings
+  IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443"
+
+  # Chart settings
+  CHART_BASE_PATH: "."
+
+  # Git settings
+  GIT_STRATEGY: clone
+  GIT_DEPTH: 0
+
+# Variables validation and path detection logic
+.validate_variables:
+  before_script:
+    - |
+      set -eo pipefail
+      REPO_ROOT=$(pwd)
+      echo "Repository root: $REPO_ROOT"    
+      # Direct pipeline trigger checks
+      if [ -n "$CI_PIPELINE_SOURCE" ] && [ "$CI_PIPELINE_SOURCE" = "pipeline" ]; then
+        echo "This is a pipeline trigger"
+        if [ -z "$SERVICE_NAME" ] || [ -z "$ENV" ]; then
+          echo "Error: Pipeline trigger requires SERVICE_NAME and ENV variables"
+          echo "Current values:"
+          echo "SERVICE_NAME: $SERVICE_NAME"
+          echo "ENV: $ENV"
+          exit 1
+        fi
+        
+        # Validate environment for pipeline trigger
+        if [[ ! "$ENV" =~ ^(dev|sit|uat|int|perf|pre-prod|pre-prod-dc|prod-dr|prod-dc)$ ]]; then
+          echo "Error: Invalid environment '$ENV' for pipeline trigger"
+          echo "Valid environments: dev, sit, uat, int, perf, pre-prod, pre-prod-dc, prod-dr, prod-dc"
+          exit 1
+        fi
+        
+        # For pipeline triggers, use provided values directly
+        echo "Using pipeline trigger values:"
+        echo "Service: $SERVICE_NAME"
+        echo "Environment: $ENV"
+      else    
+        echo "Debug: GitLab CI Variables:"
+        echo "CI_COMMIT_SHA: $CI_COMMIT_SHA"
+        echo "CI_COMMIT_BEFORE_SHA: $CI_COMMIT_BEFORE_SHA"
+        echo "CI_COMMIT_REF_NAME: $CI_COMMIT_REF_NAME"
+        echo "CI_COMMIT_CHANGED_FILES: $CI_COMMIT_CHANGED_FILES"
+        git config --global http.sslVerify false
+        git config --global --add safe.directory '*'
+        git config --global user.name "ci"
+        git config --global user.email "ci.cedge@sbi.co.in"    
+        git remote set-url origin https://gitlab-ci-token:$GIT_PAT@gitlab.epay.sbi/$CI_PROJECT_PATH.git
+        # Try to get changed files manually if CI_COMMIT_CHANGED_FILES is empty
+        if [ -z "$CI_COMMIT_CHANGED_FILES" ]; then
+          echo "Debug: CI_COMMIT_CHANGED_FILES is empty, trying to get changed files manually..."
+          if [ -n "$CI_COMMIT_SHA" ] && [ -n "$CI_COMMIT_BEFORE_SHA" ]; then
+            CI_COMMIT_CHANGED_FILES=$(git diff --name-only "$CI_COMMIT_BEFORE_SHA" "$CI_COMMIT_SHA")
+            echo "Debug: Manually detected changed files:"
+            echo "$CI_COMMIT_CHANGED_FILES"
+          else
+            echo "Debug: Cannot detect changed files - missing commit information"
+          fi
+        fi
+        
+        if [ -z "$SERVICE_NAME" ] || [ -z "$ENV" ]; then    
+          if [ -n "$CI_COMMIT_CHANGED_FILES" ]; then
+            echo "Changed files: $CI_COMMIT_CHANGED_FILES"
+            changed_chart_path=$(echo "$CI_COMMIT_CHANGED_FILES" | grep -oE '(dev|sit|uat|int|perf|pre-prod|pre-prod-dc|prod-dr|prod-dc)/charts/[^/]+' | head -1)
+            if [ -n "$changed_chart_path" ]; then
+              echo "Found changed chart path: $changed_chart_path"
+              detected_env=$(echo "$changed_chart_path" | cut -d'/' -f1)
+              detected_service=$(echo "$changed_chart_path" | cut -d'/' -f3)
+              
+              if [ -n "$detected_env" ]; then
+                ENV="$detected_env"
+                echo "Detected environment from changed path: $ENV"
+              fi
+              
+              if [ -n "$detected_service" ]; then
+                SERVICE_NAME="$detected_service"
+                echo "Detected service from changed path: $SERVICE_NAME"
+              fi
+            else
+              echo "No chart changes detected in commit"
+              exit 0
+            fi
+          else
+            echo "No changed files detected"
+            exit 0
+          fi
+          
+          if [ -z "$ENV" ]; then
+            echo "Error: Could not detect environment from changed path"
+            exit 1
+          fi
+          
+          if [ -z "$SERVICE_NAME" ]; then
+            echo "Error: Could not detect service name from changed path"
+            exit 1
+          fi
+        fi
+
+        echo "Using service: $SERVICE_NAME"
+        echo "Using environment: $ENV"
+        
+        expected_chart_path="${REPO_ROOT}/${ENV}/charts/${SERVICE_NAME}"
+        if [ ! -d "$expected_chart_path" ]; then
+          echo "Error: Chart directory not found at expected path: $expected_chart_path"
+          exit 1
+        else
+          echo "Found chart at path: $expected_chart_path"
+        fi
+      fi
+
+
+# Reusable OpenShift login and setup logic
+.openshift_login_setup:
+  before_script:
+    - |
+      set -eo pipefail
+      if [ -z "$KUBE_NAMESPACE" ]; then
+        echo "Error: KUBE_NAMESPACE not set. Ensure validate_service job ran successfully."
+        exit 1
+      fi
+      echo "Using namespace: $KUBE_NAMESPACE"
+      
+      case $ENV in
+        dev|sit|uat|int)
+          CLUSTER="dev"
+          OPENSHIFT_SERVER="${DEV_CLUSTER:-https://api.dev.epay.sbi:6443}"
+          ;;
+        pre-prod|perf)
+          CLUSTER="preprod"
+          OPENSHIFT_SERVER="${PREPROD_CLUSTER:-https://api.preprod.epay.sbi:6443}"
+          ;;
+        pre-prod-dc)
+          CLUSTER="preproddc"
+          OPENSHIFT_SERVER="${PREPROD_DC_CLUSTER:-https://api.dcpreprod.epay.sbi:6443}"
+          ;;
+        prod-dr)
+          CLUSTER="proddr"
+          OPENSHIFT_SERVER="${PROD_CLUSTER:-https://api.dr.prod.epay.sbi:6443}"
+          ;;
+        prod-dc)
+          CLUSTER="proddc"
+          OPENSHIFT_SERVER="${PRODDC_CLUSTER:-https://api.dc.prod.epay.sbi:6443}"
+          ;;
+        *)
+          echo "Error: Invalid environment: $ENV"
+          echo "Valid environments: dev, sit, uat, int, pre-prod, perf, pre-prod-dc, prod-dr, prod-dc"
+          exit 1
+          ;;
+      esac
+
+      export OPENSHIFT_TOKEN_VAR_NAME="${CLUSTER^^}_TOKEN"
+      echo "$OPENSHIFT_TOKEN_VAR_NAME"
+      if [ -z "${!OPENSHIFT_TOKEN_VAR_NAME}" ]; then
+        echo "Error: OpenShift token variable $OPENSHIFT_TOKEN_VAR_NAME not found for $CLUSTER"
+        exit 1
+      fi
+      ACTUAL_OPENSHIFT_TOKEN="${!OPENSHIFT_TOKEN_VAR_NAME}"
+
+      echo "Logging into OpenShift cluster..."
+      oc login "$OPENSHIFT_SERVER" --token="$ACTUAL_OPENSHIFT_TOKEN" --insecure-skip-tls-verify || exit 1
+
+      if ! oc whoami > /dev/null 2>&1; then
+        echo "Error: Failed to verify cluster access"
+        exit 1
+      fi
+
+      if ! oc project "${KUBE_NAMESPACE}" > /dev/null 2>&1; then
+        echo "Error: Namespace ${KUBE_NAMESPACE} does not exist or cannot be accessed. It might need to be created manually or permissions checked."
+        exit 1
+      fi
+      echo "Successfully switched to namespace ${KUBE_NAMESPACE}"
+
+# Reusable image configuration
+.helm_image:
+  image:
+    name: ${IMAGE_REGISTRY}/ubi9/ochelm:03122024
+    entrypoint: [""]
+
+# Common variables for all jobs
+.helm_variables:
+  variables:
+    # These variables will be populated by validate_service job artifacts
+    KUBE_NAMESPACE: ${KUBE_NAMESPACE}
+    RELEASE_NAME: ${RELEASE_NAME}
+    CHART_PATH: ${CHART_PATH}
+    HEALTH_CHECK_ENDPOINT: ${HEALTH_CHECK_ENDPOINT}
+
+# Default script template for jobs
+.default_script:
+  script:
+    - echo "No script defined for this job"
+
+# Validate service configuration
+validate_service:
+  stage: validate
+  image: ${IMAGE_REGISTRY}/library/rhelgit:latest
+  extends: 
+    - .helm_variables
+    - .validate_variables
+  before_script:
+    - !reference [.validate_variables, before_script]
+    - |
+      set -eo pipefail
+      echo "$SERVICES_CONFIG" > /tmp/services_config.yml
+  script:
+    - |
+      set -eo pipefail
+      
+      # Extract service configuration
+      SERVICE_CONFIG=$(awk -v service="$SERVICE_NAME" -v env="$ENV" '
+        BEGIN { found=0; in_service=0; in_environments=0; }
+        /^[[:space:]]*-[[:space:]]*name:/ { 
+          if ($0 ~ service) { found=1; in_service=1; }
+          else { in_service=0; }
+        }
+        
+        # Track namespace
+        /^[[:space:]]*-[[:space:]]*namespace:/ { 
+          gsub(/^[[:space:]]*-[[:space:]]*namespace:[[:space:]]*/, "")
+          current_namespace = $0
+          in_service = 0
+          in_environments = 0
+        }
+        
+        # Track services section
+        /^[[:space:]]*services:[[:space:]]*$/ { in_services_section = 1 }
+        
+        # Find target service
+        in_services_section && /^[[:space:]]*-[[:space:]]*name:/ {
+          gsub(/^[[:space:]]*-[[:space:]]*name:[[:space:]]*/, "")
+          if ($0 == service) {
+            found = 1
+            in_service = 1
+            in_environments = 0
+            printf("NAMESPACE=%s%s%s\n", q, current_namespace, q)
+          } else {
+            in_service = 0
+          }
+        }
+        
+        # Extract service details when in target service
+        found && in_service {
+          if (/^[[:space:]]*release:/) {
+            gsub(/^[[:space:]]*release:[[:space:]]*/, "")
+            printf("RELEASE=%s%s%s\n", q, $0, q)
+          }
+          else if (/^[[:space:]]*chart:/) {
+            gsub(/^[[:space:]]*chart:[[:space:]]*/, "")
+            printf("CHART=%s%s%s\n", q, $0, q)
+          }
+          else if (/^[[:space:]]*health_check:/) {
+            gsub(/^[[:space:]]*health_check:[[:space:]]*/, "")
+            printf("HEALTH_CHECK=%s%s%s\n", q, $0, q)
+          }
+          else if (/^[[:space:]]*environments:[[:space:]]*$/) {
+            in_environments = 1
+          }
+          else if (in_environments && /^[[:space:]]*-[[:space:]]*[a-zA-Z0-9_-]+$/) {
+            env_name_raw = $0
+            gsub(/^[[:space:]]*-[[:space:]]*/, "", env_name_raw)
+            gsub(/-/, "_", env_name_raw)
+            printf("ENV_%s=1\n", env_name_raw)
+          }
+          else if (/^[[:space:]]*-[[:space:]]*name:/ || /^[[:space:]]*-[[:space:]]*namespace:/) {
+            exit
+          }
+        }
+        
+        END { if (!found) print "SERVICE_NOT_FOUND=1" }
+      ' /tmp/services_config.yml)
+
+      eval "$SERVICE_CONFIG"
+      
+      # Validate service was found
+      if [ "$SERVICE_NOT_FOUND" = "1" ]; then
+        echo "Error: Service '$SERVICE_NAME' not found in configuration"
+        echo "Available services:"
+        awk '/^[[:space:]]*-[[:space:]]*name:/ { gsub(/^[[:space:]]*-[[:space:]]*name:[[:space:]]*/, ""); print "  - " $0 }' /tmp/services_config.yml
+        exit 1
+      fi
+
+      # Validate required fields
+      for field in NAMESPACE RELEASE CHART; do
+        if [ -z "${!field}" ]; then
+          echo "Error: Missing $field configuration for service '$SERVICE_NAME'"
+          exit 1
+        fi
+      done
+
+      # Check environment support
+      env_var="ENV_${ENV//-/_}"
+      if [ -z "${!env_var}" ]; then
+        echo "Error: Environment '$ENV' not supported for service '$SERVICE_NAME'"
+        echo "Supported environments for $SERVICE_NAME:"
+        awk -v service="$SERVICE_NAME" '
+          BEGIN { s_found=0; in_s_env=0 }
+          /^[[:space:]]*-[[:space:]]*name:/ { 
+            gsub(/^[[:space:]]*-[[:space:]]*name:[[:space:]]*/, "")
+            if ($0 == service) s_found=1; else if (s_found) exit
+          }
+          s_found && /environments:/ { in_s_env=1; next }
+          s_found && in_s_env && /^[[:space:]]*-[[:space:]]*/ { 
+            gsub(/^[[:space:]]*-[[:space:]]*/, "")
+            print "  - " $0 
+          }
+          s_found && in_s_env && (!/^[[:space:]]*-[[:space:]]*/ && !/^[[:space:]]*$/) { exit }
+        ' /tmp/services_config.yml
+        exit 1
+      fi
+
+      # Set computed values
+      SERVICE_NAMESPACE="$NAMESPACE"
+      SERVICE_RELEASE="$RELEASE" 
+      SERVICE_CHART="$CHART"
+      SERVICE_HEALTH_CHECK="$HEALTH_CHECK"
+      KUBE_NAMESPACE="${ENV}-${SERVICE_NAMESPACE}"
+      CHART_PATH_TO_VALIDATE="${REPO_ROOT}/${ENV}/charts/${SERVICE_CHART}"
+
+      # Validate chart path exists
+      if [ ! -d "$CHART_PATH_TO_VALIDATE" ]; then
+        echo "Error: Chart directory not found at $CHART_PATH_TO_VALIDATE"
+        exit 1
+      fi
+
+      # Export variables for downstream jobs
+      cat > build.env << EOF
+      SERVICE_NAMESPACE=$SERVICE_NAMESPACE
+      SERVICE_RELEASE=$SERVICE_RELEASE
+      SERVICE_CHART=$SERVICE_CHART
+      SERVICE_HEALTH_CHECK=$SERVICE_HEALTH_CHECK
+      BASE_NAMESPACE=$SERVICE_NAMESPACE
+      KUBE_NAMESPACE=$ENV-$SERVICE_NAMESPACE
+      CHART_PATH=$CHART_PATH_TO_VALIDATE
+      ENV=$ENV
+      SERVICE_NAME=$SERVICE_NAME
+      RELEASE_NAME="$SERVICE_RELEASE"
+      EOF
+
+      # Debug output
+      echo "Debug: Contents of build.env:"
+      cat build.env
+      echo "Debug: Current environment variables:"
+      env | grep -E "^(SERVICE_|KUBE_|CHART_|BASE_|ENV|SERVICE_NAME)"
+
+      # Set variables for current job
+      export KUBE_NAMESPACE="$ENV-$SERVICE_NAMESPACE"
+      export RELEASE_NAME="$SERVICE_RELEASE"
+      export CHART_PATH="$CHART_PATH_TO_VALIDATE"
+      export HEALTH_CHECK_ENDPOINT="$SERVICE_HEALTH_CHECK"
+      export ENV="$ENV"
+      export SERVICE_NAME="$SERVICE_NAME"
+
+      echo "✅ Service validation successful"
+      echo "   Service: $SERVICE_NAME"
+      echo "   Namespace: $KUBE_NAMESPACE" 
+      echo "   Release: $SERVICE_RELEASE"
+      echo "   Chart: $CHART_PATH_TO_VALIDATE"
+  after_script:
+    - rm -f /tmp/services_config.yml
+  artifacts:
+    reports:
+      dotenv: build.env
+  when: always
+
+# Deploy to cluster
+deploy:
+  stage: deploy
+  extends: 
+    - .helm_image
+    - .helm_variables
+    - .openshift_login_setup
+  allow_failure: false
+  needs:
+    - job: validate_service
+      artifacts: true
+  script:
+    - |
+      set -eo pipefail
+      
+      # Verify required variables from validate_service
+      if [ -z "$SERVICE_NAME" ] || [ -z "$ENV" ]; then
+        echo "Error: SERVICE_NAME or ENV not set. This job should only run after validate_service."
+        exit 1
+      fi
+      
+      if [ -z "$KUBE_NAMESPACE" ] || [ -z "$RELEASE_NAME" ] || [ -z "$CHART_PATH" ]; then
+        echo "Error: Required variables from validate_service are missing:"
+        echo "KUBE_NAMESPACE: $KUBE_NAMESPACE"
+        echo "RELEASE_NAME: $RELEASE_NAME"
+        echo "CHART_PATH: $CHART_PATH"
+        exit 1
+      fi
+      
+      # Verify chart path exists
+      if [ ! -d "$CHART_PATH" ]; then
+        echo "Error: Chart path does not exist: $CHART_PATH"
+        exit 1
+      fi
+      
+      echo "Deploying ${RELEASE_NAME} to ${KUBE_NAMESPACE}..."
+      echo "Chart path: ${CHART_PATH}"
+      
+      if ! oc get namespace "${KUBE_NAMESPACE}" &>/dev/null; then
+        echo "Creating namespace ${KUBE_NAMESPACE}..."
+        oc create namespace "${KUBE_NAMESPACE}"
+      fi
+      
+      # helm lint ${CHART_PATH} --debug
+      # helm template ${CHART_PATH} --debug
+      #helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} --dry-run --debug
+
+      HELM_CMD="helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
+        --namespace ${KUBE_NAMESPACE} \
+        --history-max ${HELM_HISTORY_MAX} \
+        --timeout ${DEPLOYMENT_TIMEOUT}"
+
+      if [ "${HELM_ATOMIC}" = "true" ]; then
+        HELM_CMD="${HELM_CMD} --atomic"
+      fi
+      
+      if [ -n "$VERSION" ]; then
+        echo "Using explicit version: $VERSION"
+        HELM_CMD="${HELM_CMD} --set image.tag=${VERSION}"
+      fi
+
+      if [ -n "$HELM_EXTRA_ARGS" ]; then
+        echo "Adding extra helm arguments: $HELM_EXTRA_ARGS"
+        HELM_CMD="${HELM_CMD} ${HELM_EXTRA_ARGS}"
+      fi
+
+      echo "Executing: $HELM_CMD"
+      if ! eval "$HELM_CMD"; then
+        echo "Error: Helm deployment failed"
+        echo "Last 5 revisions:"
+        helm history "${RELEASE_NAME}" --namespace "${KUBE_NAMESPACE}" --max 5
+        exit 1
+      fi
+  rules:    
+    - when: always
+
+# Verify deployment
+verify_deployment:
+  stage: verify
+  extends: 
+    - .helm_image
+    - .helm_variables
+    - .openshift_login_setup
+  allow_failure: true
+  script:
+    - |
+      set -eo pipefail
+      
+      function get_deployment_status() {
+        oc get "deployment/${RELEASE_NAME}" -n "${KUBE_NAMESPACE}" -o json | jq -r '.status'
+      }
+
+      function check_pod_logs() {
+        local pod_name=$1
+        echo "Checking logs for pod ${pod_name}..."
+        oc logs "${pod_name}" -n "${KUBE_NAMESPACE}" --tail=50 || true
+      }
+
+      echo "Waiting for deployment rollout to complete..."
+      if ! oc rollout status "deployment/${RELEASE_NAME}" -n "${KUBE_NAMESPACE}" --timeout="${DEPLOYMENT_TIMEOUT}"; then
+        echo "Error: Deployment rollout failed for ${RELEASE_NAME} in ${KUBE_NAMESPACE}."
+        echo "Deployment Status:"
+        get_deployment_status
+        
+        echo "Checking recent pod logs..."
+        for pod in $(oc get pods -n "${KUBE_NAMESPACE}" -l "app=${RELEASE_NAME}" -o name); do
+          check_pod_logs "$pod"
+        done
+        
+        if helm rollback "${RELEASE_NAME}" -n "${KUBE_NAMESPACE}"; then
+          echo "Helm rollback successful for ${RELEASE_NAME}."
+        else
+          echo "Warning: Helm rollback failed for ${RELEASE_NAME}. Manual intervention may be required."
+        fi
+        exit 1
+      fi
+      
+      DESIRED_REPLICAS=$(oc get "deployment/${RELEASE_NAME}" -n "${KUBE_NAMESPACE}" -o jsonpath='{.spec.replicas}')
+      AVAILABLE_REPLICAS=$(oc get "deployment/${RELEASE_NAME}" -n "${KUBE_NAMESPACE}" -o jsonpath='{.status.availableReplicas}')
+      
+      if [ -z "$AVAILABLE_REPLICAS" ] || [ "$AVAILABLE_REPLICAS" -eq 0 ] || [ "$AVAILABLE_REPLICAS" -lt "$DESIRED_REPLICAS" ]; then
+        echo "Error: Deployment ${RELEASE_NAME} failed - available replicas: ${AVAILABLE_REPLICAS:-0}, desired: ${DESIRED_REPLICAS}"
+        echo "Deployment Status:"
+        get_deployment_status
+        
+        echo "Pod Status:"
+        oc get pods -n "${KUBE_NAMESPACE}" -l "app=${RELEASE_NAME}" -o wide
+        
+        echo "Events:"
+        oc get events -n "${KUBE_NAMESPACE}" --sort-by='.lastTimestamp' | grep "${RELEASE_NAME}" || true
+        
+        if helm rollback "${RELEASE_NAME}" -n "${KUBE_NAMESPACE}"; then
+          echo "Helm rollback successful for ${RELEASE_NAME}."
+        else
+          echo "Warning: Helm rollback failed for ${RELEASE_NAME}. Manual intervention may be required."
+        fi
+        exit 1
+      fi
+      
+      if [ -n "${HEALTH_CHECK_ENDPOINT}" ]; then
+        echo "Performing health check for ${RELEASE_NAME}..."
+        ROUTE_HOST=$(oc get "route/${RELEASE_NAME}" -n "${KUBE_NAMESPACE}" -o jsonpath='{.spec.host}' 2>/dev/null)
+        if [ -z "${ROUTE_HOST}" ]; then
+          echo "Warning: Route host not found for ${RELEASE_NAME}. Skipping health check."
+        else
+          HEALTH_CHECK_URL="https://${ROUTE_HOST}${HEALTH_CHECK_ENDPOINT}"
+          echo "Health check URL: ${HEALTH_CHECK_URL}"
+          end_time=$((SECONDS + $(echo ${HEALTH_CHECK_TIMEOUT} | sed 's/m$/*60/' | sed 's/s$//' | bc) ))
+          healthy=false
+          
+          while [ $SECONDS -lt $end_time ]; do
+            response=$(curl --silent --fail --show-error --insecure "${HEALTH_CHECK_URL}" || echo "FAILED")
+            if [ "$response" != "FAILED" ]; then
+              if echo "$response" | grep -q "\"status\":\"${HEALTH_CHECK_SUCCESS_STATUS}\""; then
+                echo "Service ${RELEASE_NAME} is healthy."
+                healthy=true
+                break
+              fi
+              echo "Unexpected health check response:"
+              echo "$response"
+            fi
+            echo "Waiting for service ${RELEASE_NAME} to be healthy... (retrying in ${HEALTH_CHECK_INTERVAL})"
+            sleep "$(echo ${HEALTH_CHECK_INTERVAL} | sed 's/s$//' | bc)"
+          done
+          
+          if [ "$healthy" != "true" ]; then
+            echo "Warning: Health check failed after ${HEALTH_CHECK_TIMEOUT}."
+            echo "Pod Status:"
+            oc get pods -n "${KUBE_NAMESPACE}" -l "app=${RELEASE_NAME}" -o wide
+            echo "Recent Pod Logs:"
+            for pod in $(oc get pods -n "${KUBE_NAMESPACE}" -l "app=${RELEASE_NAME}" -o name); do
+              check_pod_logs "$pod"
+            done
+          fi
+        fi
+      fi
+      echo "Deployment verification completed for ${RELEASE_NAME}."
+  rules:
+    - when: always
+  needs:
+    - job: validate_service
+      artifacts: true
+    - job: deploy
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+      - unknown_failure
+  interruptible: true
+  timeout: 10m
+
+# Usage example in parent .gitlab-ci.yml:
+# include:
+#   - project: 'epay/devops'
+#     file: 'ci-templates/cd/helm/helmv2.yml'
+#     ref: main
+#
+# Note: SERVICE_NAME and ENV can be provided via pipeline variables from deployment.yml
+# If not provided, they will be auto-detected from file path changes
+# workflow:
+#   rules:
+#     - when: always
