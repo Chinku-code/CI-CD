@@ -1,2 +1,9 @@
 --set image.repository=${IMAGE_REGISTRY}${SERVICE_NAME} \
 --set image.tag=${VERSION}
+
+
+      if [ -n "$VERSION" ]; then
+        echo "Using explicit version: $VERSION"
+        HELM_CMD="${HELM_CMD} --set image.tag=${VERSION}"
+      fi
+
