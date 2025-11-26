@@ -33,3 +33,41 @@ IMAGE_REGISTRY
   UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
   PERF_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
   PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
+
+----------------------------------------------------------------------------------------------------
+
+echo "Deploying ${RELEASE_NAME} to ${KUBE_NAMESPACE}..."
+echo "Chart path: ${CHART_PATH}"
+
+# -----------------------------------------
+# Environment-wise Image Registry Selection
+# -----------------------------------------
+case $ENV in
+  dev)
+    IMAGE_REGISTRY="$DEV_IMAGE_REGISTRY"
+    ;;
+  int)
+    IMAGE_REGISTRY="$INT_IMAGE_REGISTRY"
+    ;;
+  sit)
+    IMAGE_REGISTRY="$SIT_IMAGE_REGISTRY"
+    ;;
+  uat)
+    IMAGE_REGISTRY="$UAT_IMAGE_REGISTRY"
+    ;;
+  perf)
+    IMAGE_REGISTRY="$PERF_IMAGE_REGISTRY"
+    ;;
+  pre-prod)
+    IMAGE_REGISTRY="$PREPROD_IMAGE_REGISTRY"
+    ;;
+  *)
+    echo "❌ ERROR: Unsupported environment for registry mapping"
+    exit 1
+    ;;
+esac
+
+echo "Using Image Registry: $IMAGE_REGISTRY"
+
+if ! oc get namespace "${KUBE_NAMESPACE}" &>/dev/null; then
+
