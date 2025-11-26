@@ -24,3 +24,12 @@ variables:
 
   # Deployment settings
   DEPLOYMENT_TIMEOUT: "15m"
+
+--------------------------------------
+IMAGE_REGISTRY
+  DEV_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9/"
+  INT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  SIT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  PERF_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
+  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
