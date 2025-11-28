@@ -679,3 +679,15 @@ deploy-prod-dc:
       allow_failure: true
     - when: never
 
+gitlab.ci.yml---
+include:
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'templates/fe/html.yml'
+
+
+variables:
+  RELEASE_NAME: merchant-int  
+  CHART_NAME: epay-merchant-integration-doc
+
+
