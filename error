@@ -1,73 +1,23 @@
-if [ -n "$VERSION" ]; then
-  echo "Using explicit version: $VERSION"
-  HELM_CMD="${HELM_CMD} \
-    --set image.repository=${IMAGE_REGISTRY}${SERVICE_NAME} \
-    --set image.tag=${VERSION}"
-fi
--------------------------
-
-variables:
-  # OpenShift cluster configurations
-  DEV_CLUSTER: "https://api.dev.sbiepay.sbi:6443"
-  PREPROD_CLUSTER: "https://api.preprod.epay.sbi:6443"
-  PREPROD_DC_CLUSTER: "https://api.dcpreprod.epay.sbi:6443"
-  PROD_DR_CLUSTER: "https://api.dr.prod.epay.sbi:6443"
-  PROD_DC_CLUSTER: "https://api.dc.prod.epay.sbi:6443"
-
-  # Pipeline settings
-  SERVICE_NAME: ""
-  ENV: ""
-
-  # Helm settings
-  HELM_ATOMIC: "false"
-  HELM_HISTORY_MAX: "10"
-
-  # Deployment settings
-  DEPLOYMENT_TIMEOUT: "15m"
-
---------------------------------------
-IMAGE_REGISTRY
-  DEV_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9/"
-  INT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
-  SIT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
-  UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
-  PERF_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
-  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
-
-----------------------------------------------------------------------------------------------------
-
-echo "Deploying ${RELEASE_NAME} to ${KUBE_NAMESPACE}..."
-echo "Chart path: ${CHART_PATH}"
-
-# -----------------------------------------
-# Environment-wise Image Registry Selection
-# -----------------------------------------
-case $ENV in
-  dev)
-    IMAGE_REGISTRY="$DEV_IMAGE_REGISTRY"
-    ;;
-  int)
-    IMAGE_REGISTRY="$INT_IMAGE_REGISTRY"
-    ;;
-  sit)
-    IMAGE_REGISTRY="$SIT_IMAGE_REGISTRY"
-    ;;
-  uat)
-    IMAGE_REGISTRY="$UAT_IMAGE_REGISTRY"
-    ;;
-  perf)
-    IMAGE_REGISTRY="$PERF_IMAGE_REGISTRY"
-    ;;
-  pre-prod)
-    IMAGE_REGISTRY="$PREPROD_IMAGE_REGISTRY"
-    ;;
-  *)
-    echo "❌ ERROR: Unsupported environment for registry mapping"
-    exit 1
-    ;;
-esac
-
-echo "Using Image Registry: $IMAGE_REGISTRY"
-
-if ! oc get namespace "${KUBE_NAMESPACE}" &>/dev/null; then
-
+.build:
+  stage: build
+  image: 
+    name:  registry.dev.sbiepay.sbi:8443/ubi9/gradle-8.9-jdk-21:v6
+    pull_policy: always  
+  script:
+    - pwd
+    - ls -la
+    - gradlew clean :android_epay:assembleRelease
+    - |
+      if [ -n "$VERSION" ]; then
+        echo "version ${VERSION}"
+        gradle build -x test -Pversion=${VERSION}
+      else
+        gradle build -x test 
+      fi
+    - ls -lrth
+    - ls -lrth build/libs
+  artifacts:
+    paths:
+      - build/libs
+    when: on_success 
+    expire_in: 1 week
