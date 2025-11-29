@@ -1,12 +1,69 @@
-FROM registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1756959223
-USER 0
-RUN mkdir -p /usr/share/nginx/html/merchantsimulator
-COPY ./dist/ /usr/share/nginx/html/merchantsimulator
-RUN ls -lrth /usr/share/nginx/html/merchantsimulator
-RUN chmod 755 -R  /usr/share/nginx/html/merchantsimulator
-RUN chown -R nginx:nginx /usr/share/nginx/html/merchantsimulator
-COPY ./nginx.conf /etc/nginx/nginx.conf
-RUN find /etc/nginx -type d | xargs chmod 750
-RUN find /etc/nginx -type f | xargs chmod 640
-EXPOSE 8080/tcp
-CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
+http {
+
+    include       mime.types;
+
+    set_real_ip_from    0.0.0.0/0;
+    real_ip_recursive   on;
+    real_ip_header      X-Forwarded-For;  
+
+    limit_req_zone      $binary_remote_addr zone=mylimit:10m rate=10r/s;
+    limit_conn_zone     $binary_remote_addr zone=limitperip:10m;
+
+    ## Start: Size Limits & Buffer Overflows ##
+    client_body_buffer_size 1k;
+    client_header_buffer_size 1k;
+    client_max_body_size 1m;  
+    large_client_header_buffers 2 1k;  
+    ## END: Size Limits & Buffer Overflows ##
+
+    client_header_timeout 10s;
+    client_body_timeout 10s;
+
+    server {
+        listen 8080;
+        server_name localhost:8080;
+
+        root /usr/share/nginx/html;
+
+        limit_req zone=mylimit burst=70 nodelay;
+        limit_conn limitperip 10;
+
+        if ($request_method !~ ^(GET|HEAD|POST)$) {
+            return 444;
+        }
+
+        server_tokens off;
+
+        keepalive_timeout 15s;  
+        keepalive_requests 10000;
+
+        # CSP Headers
+        # add_header Content-Security-Policy "default-src 'self' https: ; script-src 'self' ; object-src 'none' ; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com ; img-src 'self' blob: data: ; base-uri 'self' ; connect-src 'self' https://dev.epay.sbi ; media-src 'self' data:;" always;
+
+        # Security Headers
+        add_header X-Frame-Options "SAMEORIGIN" always;  
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+
+        location /demo {
+            index index.html index.htm;
+            alias /usr/share/nginx/html/merchantsimulator/;
+            try_files $uri $uri/ /merchantsimulator/index.html;
+            #   index  index.html index.htm;
+            #   try_files $uri  $uri/ /index.html;
+        }
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+            root /usr/share/nginx/html/merchantsimulator;
+        }
+
+        location ~ /\. {
+            deny all;
+            return 404;
+        }
+    }
+}
+
+events {}
