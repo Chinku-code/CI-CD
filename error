@@ -1,4 +1,3 @@
-.common_rules: &common_rules
-  - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main|develop|release)(\/.+)*$/'
-  - if: '$CI_COMMIT_BRANCH =~ /^(main|develop|release)(\/.+)*$/'
-  - when: never
+This GitLab CI configuration is invalid: jobs:build:script config should be a string or a nested array of strings up to 10 levels deep
+
+after change now showing this issue 
