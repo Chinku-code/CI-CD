@@ -1,3 +1,4 @@
-This GitLab CI configuration is invalid: jobs:build:script config should be a string or a nested array of strings up to 10 levels deep
-
-after change now showing this issue 
+Pipeline #52619 failed
+Pipeline failed for 94a00cbf
+1 week ago
+This GitLab CI configuration is invalid: jobs:build-fe:script config should be a string or a nested array of strings up to 10 levels deep.
