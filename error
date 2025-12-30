@@ -1,4 +1,32 @@
-Pipeline #52619 failed
-Pipeline failed for 94a00cbf
-1 week ago
-This GitLab CI configuration is invalid: jobs:build-fe:script config should be a string or a nested array of strings up to 10 levels deep.
+.build_artifact_template:
+  stage: build
+  image:
+    name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+    pull_policy: always
+  script:
+    - echo "=== BUILD STARTED FOR ENVIRONMENT: $ENV ==="
+    - pwd
+    - ls -la
+    - npm config set proxy http://serverswg.sbi.co.in:80
+    - npm config set https-proxy http://serverswg.sbi.co.in:9090
+    - npm cache clean --force
+    - echo "Using VERSION=$VERSION"
+    - npm ci || npm install
+    - npm run build:$ENV
+    - echo "=== Build Complete ==="
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+__________________________________________________
+
+build-fe:
+  extends: .build_artifact_template
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        ENV: dev
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        ENV: prod
+    - when: never
