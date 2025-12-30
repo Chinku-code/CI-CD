@@ -1,6 +1,5 @@
-This GitLab CI configuration is invalid: `templates/fe/dynamic.yml`: An alias referenced an unknown anchor: build_artifact_template.
+This GitLab CI configuration is invalid: sast: unknown keys in `extends` (.common_rules).
 
-after i changed this u say me to add after add im facing this issue... 
 
 
 
@@ -70,16 +69,10 @@ variables:
     - echo "===== BUILD STARTED ====="
     - pwd
     - ls -la
-
-    # Proxy (required in your org)
     - npm config set proxy http://serverswg.sbi.co.in:80
     - npm config set https-proxy http://serverswg.sbi.co.in:9090
-
-    # Clean install
     - npm cache clean --force
     - npm ci || npm install
-
-    # Build (NO ENV)
     - npm run build
 
     - echo "===== BUILD COMPLETED ====="
@@ -96,8 +89,7 @@ variables:
 
 # --- SINGLE, UNIVERSAL BUILD JOB ---
 build:
-  <<: *build_artifact_template
-  <<: *common_rules
+  extends: .build
 
 # --- TEST JOB ---
 test:
