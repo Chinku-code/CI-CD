@@ -1,24 +1,124 @@
-This GitLab CI configuration is invalid: jobs:build-fe:script config should be a string or a nested array of strings up to 10 levels deep.
+Running with gitlab-runner 17.8.0 (e4f782b3)
+  on DR-Gitlab-runner t1_CpKnL, system ID: s_5f020bf813e7
+Resolving secrets
+Preparing the "docker" executor
+00:04
+Using Docker executor with image registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using locally found image version due to "if-not-present" pull policy
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Pulling docker image registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 ...
+Using docker image sha256:c1037efa7a6cfce811caf269e33c408144a2058361edcd7ab9d99c1aa67433c8 for registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 with digest registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm@sha256:96ab8f99d7e94b7d955b4129daa1a36556977e216b5ff4b392c07e2d8a776e58 ...
+Preparing environment
+00:02
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Running on runner-t1cpknl-project-65-concurrent-0 via Gitlab-DR-Runr...
+Getting source from Git repository
+00:04
+$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
+Fetching changes with git depth set to 20...
+Initialized empty Git repository in /tmp/builds/epay/frontends/epay_perf_simulator/.git/
+Created fresh repository.
+Checking out d94564f3 as detached HEAD (ref is release/perf)...
+Skipping Git submodules setup
+Executing "step_script" stage of the job script
+00:24
+Using docker image sha256:c1037efa7a6cfce811caf269e33c408144a2058361edcd7ab9d99c1aa67433c8 for registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 with digest registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm@sha256:96ab8f99d7e94b7d955b4129daa1a36556977e216b5ff4b392c07e2d8a776e58 ...
+$ echo "=== BUILD STARTED FOR UNIVERSAL ARTIFACT ==="
+=== BUILD STARTED FOR UNIVERSAL ARTIFACT ===
+$ pwd
+/tmp/builds/epay/frontends/epay_perf_simulator
+$ ls -la
+total 544
+drwxrwxrwx. 7 default root   4096 Dec 30 09:32 .
+drwxrwxrwx. 4 default root     64 Dec 30 09:32 ..
+-rw-rw-rw-. 1 default root    288 Dec 30 09:32 .env
+drwxrwxrwx. 6 default root    128 Dec 30 09:32 .git
+-rw-rw-rw-. 1 default root    287 Dec 30 09:32 .gitignore
+-rw-rw-rw-. 1 default root    202 Dec 30 09:32 .gitlab-ci.yml
+drwxrwxrwx. 4 default root     44 Dec 30 09:32 .vite
+-rw-rw-rw-. 1 default root    455 Dec 30 09:32 Dockerfile
+-rw-rw-rw-. 1 default root   6233 Dec 30 09:32 README.md
+-rw-rw-rw-. 1 default root    415 Dec 30 09:32 components.json
+-rw-rw-rw-. 1 default root    734 Dec 30 09:32 eslint.config.js
+-rw-rw-rw-. 1 default root   3538 Dec 30 09:32 index.css
+-rw-rw-rw-. 1 default root    675 Dec 30 09:32 index.html
+-rw-rw-rw-. 1 default root    409 Dec 30 09:32 jest.config.ts
+-rw-rw-rw-. 1 default root     35 Dec 30 09:32 jest.setup.ts
+-rw-rw-rw-. 1 default root   2088 Dec 30 09:32 nginx.conf
+-rw-rw-rw-. 1 default root 466190 Dec 30 09:32 package-lock.json
+-rw-rw-rw-. 1 default root   2369 Dec 30 09:32 package.json
+-rw-rw-rw-. 1 default root     80 Dec 30 09:32 postcss.config.js
+drwxrwxrwx. 2 default root     72 Dec 30 09:32 public
+drwxrwxrwx. 6 default root    174 Dec 30 09:32 src
+-rw-rw-rw-. 1 default root   2056 Dec 30 09:32 tailwind.config.js
+drwxrwxrwx. 3 default root     23 Dec 30 09:32 test
+-rw-rw-rw-. 1 default root    823 Dec 30 09:32 tsconfig.app.json
+-rw-rw-rw-. 1 default root    628 Dec 30 09:32 tsconfig.json
+-rw-rw-rw-. 1 default root    479 Dec 30 09:32 tsconfig.node.json
+-rw-rw-rw-. 1 default root    577 Dec 30 09:32 vite.config.ts
+-rw-rw-rw-. 1 default root   2986 Dec 30 09:32 vite.config.ts.timestamp-1734693863164-ae63645a81b86.mjs
+$ npm config set proxy http://serverswg.sbi.co.in:80
+$ npm config set https-proxy http://serverswg.sbi.co.in:9090
+$ npm cache clean --force
+npm warn using --force Recommended protections disabled.
+$ echo "Using VERSION=$VERSION"
+Using VERSION=v-release-perf-20251230093229
+$ npm ci || npm install
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated domexception@4.0.0: Use your platform's native DOMException instead
+npm warn deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+added 901 packages, and audited 902 packages in 15s
+95 packages are looking for funding
+  run `npm fund` for details
+14 vulnerabilities (2 low, 6 moderate, 5 high, 1 critical)
+To address all issues, run:
+  npm audit fix
+Run `npm audit` for details.
+$ npm run build
+> epayment-final@0.0.0 build
+> tsc -b && vite build
+src/core/lib/crytpo/rsa.ts(2,21): error TS2307: Cannot find module 'node-rsa' or its corresponding type declarations.
+Cleaning up project directory and file based variables
+00:02
+ERROR: Job failed: exit code 1
+_____________________________________________________
+
+this error im facing and here is my yml. 
 
 include:
+  # The dynamic.yml include was causing the error and is now replaced locally.
   # - project: 'epay/devops/ci-templates'
   #   ref: feature/CIfrontend
   #   file: 'ci/build/dynamic.yml'
+
   - project: 'epay/devops/ci-templates'
     ref: feature/CIfrontend
     file: 'ci/sast/sast.yml'
+
   - project: 'epay/devops/ci-templates'
     ref: main
     file: 'ci/sast/fortify.sast.yml'
+
   - project: 'epay/devops/ci-templates'
     ref: feature/CIfrontend
     file: 'ci/release/version.yml'
+
   - project: 'epay/devops/ci-templates'
     ref: feature/CIfrontend
     file: 'ci/release/release.yml'
+    
   - project: 'epay/devops/ci-templates'
     ref: feature/CIfrontend
     file: 'ci/build/podman.container.yml'
+
   - project: 'epay/devops/ci-templates'
     ref: feature/CIfrontend
     file: 'ci/deploy/deployment.yml'
@@ -49,13 +149,14 @@ variables:
   PODMAN_TLS_VERIFY: "false"
 
 # --- Hidden Templates for Reuse ---
-.build_artifact_template:
+
+.build_artifact_template: &build_artifact_template
   stage: build
   image:
     name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
     pull_policy: always
   script:
-    - echo "=== BUILD STARTED FOR ENVIRONMENT: $ENV ==="
+    - echo "=== BUILD STARTED FOR UNIVERSAL ARTIFACT ==="
     - pwd
     - ls -la
     - npm config set proxy http://serverswg.sbi.co.in:80
@@ -63,35 +164,27 @@ variables:
     - npm cache clean --force
     - echo "Using VERSION=$VERSION"
     - npm ci || npm install
-    - npm run build:$ENV
+    - npm run build
     - echo "=== Build Complete ==="
   artifacts:
     paths:
       - dist/
+    when: on_success
     expire_in: 1 week
 
-# Reusable rules for standard branches
+# Reusable rules for standard branches (Used by build, test, sast)
 .common_rules: &common_rules
-  - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main|develop|release)(\/.+)*$/'
-  - if: '$CI_COMMIT_BRANCH =~ /^(main|develop|release)(\/.+)*$/'
-  - when: never
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main|develop|release)(\/.+)*$/'
+    - if: '$CI_COMMIT_BRANCH =~ /^(main|develop|release)(\/.+)*$/'
+    - when: never
 
 # --- Job Definitions ---
 
 # --- SINGLE, UNIVERSAL BUILD JOB ---
-build-fe:
-  extends: .build_artifact_template
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      variables:
-        ENV: dev
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      variables:
-        ENV: prod
-    - if: '$CI_COMMIT_BRANCH == /^release\/.*$/'
-      variables:
-        ENV: 'sit'
-    - when: never
+build:
+  <<: *build_artifact_template
+  <<: *common_rules
 
 # --- TEST JOB ---
 test:
@@ -106,23 +199,25 @@ test:
     - npm ci --prefer-offline
     - npm test
   rules:
-    - when: on_success
+    - when: on_success # Only run if the build job succeeded
 
 # --- SAST JOBS ---
 sast:
-  extends: .sast
-  rules: *common_rules
-
+  extends:
+    - .sast
+    - .common_rules
+  needs:
+    - build
 
 hp-fortify:
   variables:
     EXCLUDE_DIRS: "./**/dist/**/*"
     INCLUDE_DIRS: "./**/*.tsx,./**/*.ts,./**/*.js"
-  extends: .HPFortify
-  rules: *common_rules
-
-
-
+  extends:
+    - .HPFortify
+    - .common_rules
+  needs:
+    - build
 
 # --- CONTAINER BUILD JOB ---
 dockerbuild:
@@ -163,7 +258,7 @@ dockerbuild:
       when: manual
       allow_failure: true
       variables:
-        ENV: sit
+        ENV: sit # Default for release branch is SIT
         IMAGE_REGISTRY: ${SIT_IMAGE_REGISTRY}
         IMAGE_NAME: "${CHART_NAME}"
 
@@ -189,6 +284,7 @@ deploy-dev:
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
 
+# --- FIX: Corrected the rules block here ---
 deploy-sit:
   <<: *trigger_cd_job_base
   variables:
@@ -198,6 +294,7 @@ deploy-sit:
     - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
       when: manual
 
+# --- FIX: Corrected the rules block here ---
 deploy-uat:
   <<: *trigger_cd_job_base
   variables:
@@ -207,6 +304,7 @@ deploy-uat:
     - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
       when: manual
 
+# --- FIX: Corrected the rules block here ---
 deploy-prod-dr:
   <<: *trigger_cd_job_base
   variables:
@@ -216,6 +314,7 @@ deploy-prod-dr:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
 
+# --- FIX: Corrected the rules block here ---
 deploy-prod-dc:
   <<: *trigger_cd_job_base
   variables:
@@ -224,3 +323,43 @@ deploy-prod-dc:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
       when: manual
+
+_________________________________________________________
+
+hi here is my another bild step . for aother fronted serviece . 
+.build:
+  stage: build
+  image: 
+    name:  registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+    pull_policy: always  
+  script:
+    - pwd
+    - mkdir $ENV
+    - ls -la
+    - npm config set proxy http://serverswg.sbi.co.in:80
+    - npm config set https-proxy http://serverswg.sbi.co.in:9090
+    - ls /app
+    - npm cache clean --force
+    - |
+      if [ -n "$VERSION" ]; then
+        echo "version ${VERSION}"
+        # npm version "${VERSION}" --no-git-tag-version
+      fi
+    # - npm install --legacy-peer-deps
+    - npm install
+    #- npm install --loglevel verbose
+    #- npm install rollup@latest
+    - npm run build:$ENV
+    - ls -lrth
+    - ls -lrth /dev
+    #- npm install --save-dev eslint-plugin-react eslint-plugin-react-hooks
+    #- npm run lint -- --debug
+    #- npm run lint 
+  artifacts:
+    paths:
+      - ./dist
+    when: on_success 
+    expire_in: 1 week
+_________________________________
+
+my requerment is for no specify any env. 
