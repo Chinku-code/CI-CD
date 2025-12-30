@@ -1,69 +1,249 @@
-http {
+include:
+  # - project: 'epay/devops/ci-templates'
+  #   ref: feature/CIfrontend
+  #   file: 'ci/build/dynamic.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/sast/sast.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/sast/fortify.sast.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/release/version.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/release/release.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/build/podman.container.yml'
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/deploy/deployment.yml'
 
-    include       mime.types;
+# --- Stages (SINGLE DEFINITION) ---
+stages:
+  - build
+  - test
+  - sast
+  - hp-fortify
+  - release
+  - dockerbuild
+  - trigger_cd
+  - deploy
 
-    set_real_ip_from    0.0.0.0/0;
-    real_ip_recursive   on;
-    real_ip_header      X-Forwarded-For;  
+# --- Global Variables (SINGLE DEFINITION) ---
+variables:
+  CHART_NAME: "$CI_PROJECT_NAME"
+  VERSION: "${CI_COMMIT_SHORT_SHA}"
+  DEV_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9/"
+  SIT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
+  PROD_IMAGE_REGISTRY: "registry.prod.epay.sbi:8443/fe/"
+  GIT_STRATEGY: clone
+  CI_USERNAME: "gitlab-ci-token"
+  RELEASE_NAME: null
+  PODMAN_TLS_VERIFY: "false"
 
-    limit_req_zone      $binary_remote_addr zone=mylimit:10m rate=10r/s;
-    limit_conn_zone     $binary_remote_addr zone=limitperip:10m;
+# --- Hidden Templates for Reuse ---
+.build_artifact_template: &build_artifact_template
+  stage: build
+  image:
+    name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+    pull_policy: always
+  script:
+    - echo "=== BUILD STARTED FOR ENVIRONMENT: $ENV ==="
+    - pwd
+    - ls -la
+    - npm config set proxy http://serverswg.sbi.co.in:80
+    - npm config set https-proxy http://serverswg.sbi.co.in:9090
+    - npm cache clean --force
+    - echo "Using VERSION=$VERSION"
+    - npm ci || npm install
+    - npm run build:$ENV
+    - echo "=== Build Complete ==="
+  artifacts:
+    paths:
+      - dist/
+    when: on_success
+    expire_in: 1 week
 
-    ## Start: Size Limits & Buffer Overflows ##
-    client_body_buffer_size 1k;
-    client_header_buffer_size 1k;
-    client_max_body_size 1m;  
-    large_client_header_buffers 2 1k;  
-    ## END: Size Limits & Buffer Overflows ##
+# Reusable rules for standard branches
+.common_rules: &common_rules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main|develop|release)(\/.+)*$/'
+    - if: '$CI_COMMIT_BRANCH =~ /^(main|develop|release)(\/.+)*$/'
+    - when: never
 
-    client_header_timeout 10s;
-    client_body_timeout 10s;
+# --- Job Definitions ---
 
-    server {
-        listen 8080;
-        server_name localhost:8080;
+# --- SINGLE, UNIVERSAL BUILD JOB ---
+build:
+  <<: *build_artifact_template
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(main|develop|release)(\/.+)*$/'
+      variables:
+        ENV: 'dev'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        ENV: 'dev'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      variables:
+        ENV: 'prod'
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      variables:
+        ENV: 'sit'
+    - when: never
 
-        root /usr/share/nginx/html;
+# --- TEST JOB ---
+test:
+  stage: test
+  image:
+    name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+    pull_policy: always
+  needs:
+    - build
+  script:
+    - echo "=== RUNNING TESTS ==="
+    - npm ci --prefer-offline
+    - npm test
+  rules:
+    - when: on_success
 
-        limit_req zone=mylimit burst=70 nodelay;
-        limit_conn limitperip 10;
+# --- SAST JOBS ---
+sast:
+  extends: .sast
+  rules: *common_rules
 
-        if ($request_method !~ ^(GET|HEAD|POST)$) {
-            return 444;
-        }
 
-        server_tokens off;
+hp-fortify:
+  variables:
+    EXCLUDE_DIRS: "./**/dist/**/*"
+    INCLUDE_DIRS: "./**/*.tsx,./**/*.ts,./**/*.js"
+  extends: .HPFortify
+  rules: *common_rules
 
-        keepalive_timeout 15s;  
-        keepalive_requests 10000;
 
-        # CSP Headers
-        # add_header Content-Security-Policy "default-src 'self' https: ; script-src 'self' ; object-src 'none' ; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com ; img-src 'self' blob: data: ; base-uri 'self' ; connect-src 'self' https://dev.epay.sbi ; media-src 'self' data:;" always;
 
-        # Security Headers
-        add_header X-Frame-Options "SAMEORIGIN" always;  
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header X-XSS-Protection "1; mode=block" always;
-        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
 
-        location /demo {
-            index index.html index.htm;
-            alias /usr/share/nginx/html/merchantsimulator/;
-            try_files $uri $uri/ /merchantsimulator/index.html;
-            #   index  index.html index.htm;
-            #   try_files $uri  $uri/ /index.html;
-        }
+# --- CONTAINER BUILD JOB ---
+dockerbuild:
+  stage: dockerbuild
+  needs:
+    - test
+  script: |
+    echo "--- Building Docker Image ---"
+    echo "Environment is: ${ENV}"
+    echo "Image Registry is: ${IMAGE_REGISTRY}"
+    echo "Image Name is: ${IMAGE_NAME}"
+    echo "Full image tag will be: ${IMAGE_REGISTRY}${IMAGE_NAME}:${VERSION}"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        ENV: dev
+        IMAGE_REGISTRY: ${DEV_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "dr"'
+      when: manual
+      allow_failure: true
+      variables:
+        ENV: prod
+        IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
+        IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
+        IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
+        IMAGE_NAME: "fe/${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "dc"'
+      when: manual
+      allow_failure: true
+      variables:
+        ENV: prod
+        IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
+        IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
+        IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
+        IMAGE_NAME: "fe/${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+      allow_failure: true
+      variables:
+        ENV: sit
+        IMAGE_REGISTRY: ${SIT_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
 
-        error_page 500 502 503 504 /50x.html;
-        location = /50x.html {
-            root /usr/share/nginx/html/merchantsimulator;
-        }
+# --- DEPLOY JOBS ---
+.trigger_cd_job_base: &trigger_cd_job_base
+  stage: trigger_cd
+  needs:
+    - dockerbuild
+  trigger:
+    project: epay/devops/deployment
+    branch: feature/dynamicnginx
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
+  when: manual
 
-        location ~ /\. {
-            deny all;
-            return 404;
-        }
-    }
-}
+deploy-dev:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: dev
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
 
-events {}
+deploy-sit:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: sit
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+deploy-uat:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: uat
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+deploy-prod-dr:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: prod-dr
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+deploy-prod-dc:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: prod-dc
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+this is my ci file i have facing this issue ..
+
+Pipeline #52619 failed
+Pipeline failed for 94a00cbf
+1 week ago
+This GitLab CI configuration is invalid: jobs:sast rules should be an array containing hashes and arrays of hashes
+
+______
+
+and this my .gitlab.ci.yml--
+
+include:
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'templates/fe/dynamic.yml'
+
+variables:
+  RELEASE_NAME: perf
+  CHART_NAME: epay_perf_simulator
