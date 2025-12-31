@@ -1,19 +1,86 @@
-sast:
-  extends: .sast
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
-  needs:
-    - build
-_____________________________
-
-hp-fortify:
-  extends: .HPFortify
-  variables:
-    EXCLUDE_DIRS: "./**/dist/**/*"
-    INCLUDE_DIRS: "./**/*.tsx,./**/*.ts,./**/*.js"
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
-  needs:
-    - build
+Running with gitlab-runner 17.8.0 (e4f782b3)
+  on DR-Gitlab-runner t1_CpKnL, system ID: s_5f020bf813e7
+Resolving secrets
+Preparing the "docker" executor
+00:04
+Using Docker executor with image registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using locally found image version due to "if-not-present" pull policy
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Pulling docker image registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 ...
+Using docker image sha256:c1037efa7a6cfce811caf269e33c408144a2058361edcd7ab9d99c1aa67433c8 for registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 with digest registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm@sha256:96ab8f99d7e94b7d955b4129daa1a36556977e216b5ff4b392c07e2d8a776e58 ...
+Preparing environment
+00:02
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Running on runner-t1cpknl-project-65-concurrent-1 via Gitlab-DR-Runr...
+Getting source from Git repository
+00:04
+$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
+Fetching changes with git depth set to 20...
+Initialized empty Git repository in /tmp/builds/epay/frontends/epay_perf_simulator/.git/
+Created fresh repository.
+Checking out a86cdb25 as detached HEAD (ref is release/perf)...
+Skipping Git submodules setup
+Executing "step_script" stage of the job script
+00:26
+Using docker image sha256:c1037efa7a6cfce811caf269e33c408144a2058361edcd7ab9d99c1aa67433c8 for registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 with digest registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm@sha256:96ab8f99d7e94b7d955b4129daa1a36556977e216b5ff4b392c07e2d8a776e58 ...
+$ echo "===== BUILD STARTED ====="
+===== BUILD STARTED =====
+$ pwd
+/tmp/builds/epay/frontends/epay_perf_simulator
+$ ls -la
+total 544
+drwxrwxrwx. 7 default root   4096 Dec 31 06:46 .
+drwxrwxrwx. 4 default root     64 Dec 31 06:46 ..
+-rw-rw-rw-. 1 default root    288 Dec 31 06:46 .env
+drwxrwxrwx. 6 default root    128 Dec 31 06:46 .git
+-rw-rw-rw-. 1 default root    287 Dec 31 06:46 .gitignore
+-rw-rw-rw-. 1 default root    198 Dec 31 06:46 .gitlab-ci.yml
+drwxrwxrwx. 4 default root     44 Dec 31 06:46 .vite
+-rw-rw-rw-. 1 default root    455 Dec 31 06:46 Dockerfile
+-rw-rw-rw-. 1 default root   6233 Dec 31 06:46 README.md
+-rw-rw-rw-. 1 default root    415 Dec 31 06:46 components.json
+-rw-rw-rw-. 1 default root    734 Dec 31 06:46 eslint.config.js
+-rw-rw-rw-. 1 default root   3538 Dec 31 06:46 index.css
+-rw-rw-rw-. 1 default root    675 Dec 31 06:46 index.html
+-rw-rw-rw-. 1 default root    409 Dec 31 06:46 jest.config.ts
+-rw-rw-rw-. 1 default root     35 Dec 31 06:46 jest.setup.ts
+-rw-rw-rw-. 1 default root   2088 Dec 31 06:46 nginx.conf
+-rw-rw-rw-. 1 default root 466190 Dec 31 06:46 package-lock.json
+-rw-rw-rw-. 1 default root   2369 Dec 31 06:46 package.json
+-rw-rw-rw-. 1 default root     80 Dec 31 06:46 postcss.config.js
+drwxrwxrwx. 2 default root     72 Dec 31 06:46 public
+drwxrwxrwx. 6 default root    174 Dec 31 06:46 src
+-rw-rw-rw-. 1 default root   2056 Dec 31 06:46 tailwind.config.js
+drwxrwxrwx. 3 default root     23 Dec 31 06:46 test
+-rw-rw-rw-. 1 default root    823 Dec 31 06:46 tsconfig.app.json
+-rw-rw-rw-. 1 default root    628 Dec 31 06:46 tsconfig.json
+-rw-rw-rw-. 1 default root    479 Dec 31 06:46 tsconfig.node.json
+-rw-rw-rw-. 1 default root    577 Dec 31 06:46 vite.config.ts
+-rw-rw-rw-. 1 default root   2986 Dec 31 06:46 vite.config.ts.timestamp-1734693863164-ae63645a81b86.mjs
+$ npm config set proxy http://serverswg.sbi.co.in:80
+$ npm config set https-proxy http://serverswg.sbi.co.in:9090
+$ npm cache clean --force
+npm warn using --force Recommended protections disabled.
+$ npm ci || npm install
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated domexception@4.0.0: Use your platform's native DOMException instead
+npm warn deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+added 901 packages, and audited 902 packages in 17s
+95 packages are looking for funding
+  run `npm fund` for details
+14 vulnerabilities (2 low, 6 moderate, 5 high, 1 critical)
+To address all issues, run:
+  npm audit fix
+Run `npm audit` for details.
+$ npm run build
+> epayment-final@0.0.0 build
+> tsc -b && vite build
+src/core/lib/crytpo/rsa.ts(2,21): error TS2307: Cannot find module 'node-rsa' or its corresponding type declarations.
