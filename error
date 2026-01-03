@@ -1,247 +1,398 @@
-include:
-  # The dynamic.yml include was causing the error and is now replaced locally.
-  # - project: 'epay/devops/ci-templates'
-  #   ref: feature/CIfrontend
-  #   file: 'ci/build/dynamic.yml'
+Dockerfile:-----
+FROM registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1754404361
+USER 0
+RUN mkdir -p /usr/share/nginx/html/merchantsimulator
+COPY ./dist/ /usr/share/nginx/html/merchantsimulator
+RUN ls -lrth /usr/share/nginx/html/merchantsimulator
+RUN chmod 755 -R  /usr/share/nginx/html/merchantsimulator
+RUN chown -R nginx:nginx /usr/share/nginx/html/merchantsimulator
+COPY ./nginx.conf /etc/nginx/nginx.conf
+EXPOSE 8080/tcp
+CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
 
-  - project: 'epay/devops/ci-templates'
-    ref: feature/CIfrontend
-    file: 'ci/sast/sast.yml'
+_____________________________________________________
 
-  - project: 'epay/devops/ci-templates'
-    ref: main
-    file: 'ci/sast/fortify.sast.yml'
+ngnix.conf:__
 
-  - project: 'epay/devops/ci-templates'
-    ref: feature/CIfrontend
-    file: 'ci/release/version.yml'
+http {
 
-  - project: 'epay/devops/ci-templates'
-    ref: feature/CIfrontend
-    file: 'ci/release/release.yml'
-    
-  - project: 'epay/devops/ci-templates'
-    ref: feature/CIfrontend
-    file: 'ci/build/podman.container.yml'
+    include       mime.types;
 
-  - project: 'epay/devops/ci-templates'
-    ref: feature/CIfrontend
-    file: 'ci/deploy/deployment.yml'
+    set_real_ip_from    0.0.0.0/0;
+    real_ip_recursive   on;
+    real_ip_header      X-Forwarded-For;  
 
-# --- Stages (SINGLE DEFINITION) ---
-stages:
-  - build
-  # - test
-  - sast
-  - hp-fortify
-  - release
-  - dockerbuild
-  - trigger_cd
-  - deploy
+    limit_req_zone      $binary_remote_addr zone=mylimit:10m rate=10r/s;
+    limit_conn_zone     $binary_remote_addr zone=limitperip:10m;
 
-# --- Global Variables (SINGLE DEFINITION) ---
-variables:
-  CHART_NAME: "$CI_PROJECT_NAME"
-  VERSION: "${CI_COMMIT_SHORT_SHA}"
-  DEV_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9/"
-  SIT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
-  UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
-  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
-  PROD_IMAGE_REGISTRY: "registry.prod.epay.sbi:8443/fe/"
-  GIT_STRATEGY: clone
-  CI_USERNAME: "gitlab-ci-token"
-  RELEASE_NAME: null
-  PODMAN_TLS_VERIFY: "false"
+    ## Start: Size Limits & Buffer Overflows ##
+    client_body_buffer_size 1k;
+    client_header_buffer_size 1k;
+    client_max_body_size 1m;  
+    large_client_header_buffers 2 1k;  
+    ## END: Size Limits & Buffer Overflows ##
 
-# --- Hidden Templates for Reuse ---
+    client_header_timeout 10s;
+    client_body_timeout 10s;
 
-.build:
-  stage: build
-  image:
-    name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
-    pull_policy: always
-  script:
-    - echo "===== BUILD STARTED ====="
-    - pwd
-    - ls -la
-    - npm config set proxy http://serverswg.sbi.co.in:80
-    - npm config set https-proxy http://serverswg.sbi.co.in:9090
-    - npm cache clean --force
-    - npm ci || npm install
-    - npm install --save-dev @types/node-rsa
-    - npm run build
+    server {
+        listen 8080;
+        server_name localhost;
 
-    - echo "===== BUILD COMPLETED ====="
-    - ls -la dist
-  artifacts:
-    paths:
-      - dist/
-    when: on_success
-    expire_in: 1 week
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+        root /usr/share/nginx/html;
+
+        limit_req zone=mylimit burst=70 nodelay;
+        limit_conn limitperip 10;
+
+        if ($request_method !~ ^(GET|HEAD|POST)$) {
+            return 444;
+        }
+
+        server_tokens off;
+
+        keepalive_timeout 15s;  
+        keepalive_requests 10000;
+
+        # CSP Headers
+        add_header Content-Security-Policy "default-src 'self' https: ; script-src 'self' ; object-src 'none' ; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com ; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com ; img-src 'self' blob: data: ; base-uri 'self' ; connect-src 'self' https://dev.epay.sbi ; media-src 'self' data:;" always;
+
+        # Security Headers
+        add_header X-Frame-Options "SAMEORIGIN" always;  
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+
+        location /merchantpanel/ {
+            index index.html index.htm;
+            alias /usr/share/nginx/html/merchantpanel/;
+            try_files $uri $uri/ /merchantpanel/index.html;
+            #   index  index.html index.htm;
+            #   try_files $uri  $uri/ /index.html;
+        }
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+            root /usr/share/nginx/html/merchantpanel;
+        }
+
+        location ~ /\. {
+            deny all;
+            return 404;
+        }
+    }
+}
+
+events {}
+
+ngnix.conf change habani bcz sabu appliction au ui same use kare...
+
+__________________________________________________________________________
+
+CD : helm :
+
+values.yml: 
+
+replicaCount: 1
+
+image:
+  repository: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/{{ .Chart.Name }}"
+  pullPolicy: IfNotPresent
+  tag: "v-0808251925"
+
+imagePullSecrets:
+  - name: fe-fe-pull-secret
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount: {}
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+securityContext: {}
+
+configMap:
+  additionalLabels: {}
+  annotations: {}
+  nameSuffix: "config"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+namespace: perf-simulators
+gatewayName: perf-istio-system/perf-gateway
+virtualServiceName: perf-perfsimulator
+serviceName: perf-perfsimulator
+prefixName: /perfSimulator/
+servicePort: 8080
+gatewayPort: 80
+gatewayHost: "perf.epay.sbi"
+
+resources: {}
+ingress: {}
+
+# Disable health probes for perf (frontend doesn't need health checks)
+readinessProbe:
+  enabled: false
+livenessProbe:
+  enabled: false
+
+# HPA Configuration
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+
+autoscaling:
+  enabled: true
 
 
-# --- SINGLE, UNIVERSAL BUILD JOB ---
-build:
-  extends: .build
+# Mount configuration for frontend
+volumes:
+  - name: config-volume
+    configMap:
+      name: transaction-fe-config
+      
+volumeMounts:
+  - name: config-volume
+    mountPath: "/app/config"
+    readOnly: true
 
-# --- TEST JOB ---
-# test:
-#   stage: test
-#   image:
-#     name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
-#     pull_policy: always
-#   needs:
-#     - build
-#   script:
-#     - echo "=== RUNNING TESTS ==="
-#     - npm ci --prefer-offline
-#     - npm test
-#   rules:
-#     - when: on_success # Only run if the build job succeeded
+nodeSelector: {}
+tolerations: []
+affinity: {}
+###
+_____________________________________
 
-# --- SAST CONTROL ---
-# sast:
-#   rules:
-#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-#     - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
-#     - when: never
+chart.yml:__
+
+apiVersion: v2
+name: perfsimulator
+description: A Helm chart for Kubernetes
+
+# A chart can be either an 'application' or a 'library' chart.
+#
+# Application charts are a collection of templates that can be packaged into versioned archives
+# to be deployed.
+#
+# Library charts provide useful utilities or functions for the chart developer. They're included as
+# a dependency of application charts to inject those utilities and functions into the rendering
+# pipeline. Library charts do not define any templates and therefore cannot be deployed.
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.1.0
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "1.16.0"
+______________________________________________________________
+test.yml:-
+
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    openshift.io/display-name: "SBI ePay Pod"
+    openshift.io/description: "SBI ePay payment platform component"
+    openshift.io/provider-display-name: "SBI ePay Platform Team"
+  name: "{{ include "epayperfsimulator.fullname" . }}-test-connection"
+  labels:
+    {{- include "epayperfsimulator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "epayperfsimulator.fullname" . }}:{{ .Values.service.port }}']
+  restartPolicy: Never
+
+_________________________________________________
+
+deployment.yml:-
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "epayperfsimulator.fullname" . }}
+  labels:
+    {{- include "epayperfsimulator.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "epayperfsimulator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "{{ .Values.service.port }}"
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "epayperfsimulator.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "epayperfsimulator.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ tpl .Values.image.repository $ }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+___________________________________________________
+hpa.yml:-
+
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  annotations:
+    openshift.io/display-name: "SBI ePay HorizontalPodAutoscaler"
+    openshift.io/description: "SBI ePay payment platform component"
+    openshift.io/provider-display-name: "SBI ePay Platform Team"
+  name: {{ include "epayperfsimulator.fullname" . }}
+  labels:
+    {{- include "epayperfsimulator.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "epayperfsimulator.fullname" . }}
+  minReplicas: {{ .Values.hpa.minReplicas }}
+  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  metrics:
+    {{- if .Values.hpa.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.hpa.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+
+_________________________
+istio-vs.yml:-
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  annotations:
+    openshift.io/display-name: "SBI ePay VirtualService"
+    openshift.io/description: "SBI ePay payment platform component"
+    openshift.io/provider-display-name: "SBI ePay Platform Team"
+  name: {{ .Values.virtualServiceName }}
+  namespace: {{ .Values.namespace }}
+spec:
+  hosts:
+  - "{{ .Values.gatewayHost }}"
+  gateways:
+  - {{ .Values.gatewayName }}  
+  http:
+  - match:
+    - uri:
+        prefix: "/perfSimulator/"
+        prefix: {{ .Values.prefixName }}
+    route:
+    - destination:
+        host: {{ .Values.serviceName }}
+        port:
+          number: {{ .Values.servicePort }}
+____________________________________
+
+service.yml:-
+
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/actuator/prometheus"
+    prometheus.io/port: "{{ .Values.service.port }}"
+  name: {{ include "epayperfsimulator.fullname" . }}
+  labels:
+    {{- include "epayperfsimulator.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: {{ .Values.service.port }}-tcp
+  selector:
+    {{- include "epayperfsimulator.selectorLabels" . | nindent 4 }}
 
 
-# sast:
-#   extends:
-#     - .sast
-#   rules:
-#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-#       when: always
-#     - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
-#       when: always
-#     - when: never
+___________________________________
+serviceaccount.yml:-
+{{- if .Values.serviceAccount.create -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    openshift.io/display-name: "SBI ePay ServiceAccount"
+    openshift.io/description: "SBI ePay payment platform component"
+    openshift.io/provider-display-name: "SBI ePay Platform Team"
+  name: {{ include "epayperfsimulator.serviceAccountName" . }}
+  labels:
+    {{- include "epayperfsimulator.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+{{- end }}
+______________________________________________________
 
-hp-fortify:
-  variables:
-    EXCLUDE_DIRS: "./**/dist/**/*"
-    INCLUDE_DIRS: "./**/*.tsx,./**/*.ts,./**/*.js"
-  extends:
-    - .HPFortify
-    # - .rules
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
- 
-
-tag:
-  extends:
-    - .tag
-
-
-# --- CONTAINER BUILD JOB ---
-dockerbuild:
-  stage: dockerbuild
-  # needs:
-  #   - test
-  script: |
-    echo "--- Building Docker Image ---"
-    echo "Environment is: ${ENV}"
-    echo "Image Registry is: ${IMAGE_REGISTRY}"
-    echo "Image Name is: ${IMAGE_NAME}"
-    echo "Full image tag will be: ${IMAGE_REGISTRY}${IMAGE_NAME}:${VERSION}"
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      variables:
-        ENV: dev
-        IMAGE_REGISTRY: ${DEV_IMAGE_REGISTRY}
-        IMAGE_NAME: "${CHART_NAME}"
-    - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "dr"'
-      when: manual
-      allow_failure: true
-      variables:
-        ENV: prod
-        IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
-        IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
-        IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
-        IMAGE_NAME: "fe/${CHART_NAME}"
-    - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "dc"'
-      when: manual
-      allow_failure: true
-      variables:
-        ENV: prod
-        IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
-        IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
-        IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
-        IMAGE_NAME: "fe/${CHART_NAME}"
-    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
-      when: manual
-      allow_failure: true
-      variables:
-        ENV: sit # Default for release branch is SIT
-        IMAGE_REGISTRY: ${SIT_IMAGE_REGISTRY}
-        IMAGE_NAME: "${CHART_NAME}"
-
-# --- DEPLOY JOBS ---
-.trigger_cd_job_base: &trigger_cd_job_base
-  stage: trigger_cd
-  needs:
-    - dockerbuild
-  trigger:
-    project: epay/devops/deployment
-    branch: feature/dynamicnginx
-    strategy: depend
-    forward:
-      pipeline_variables: true
-      yaml_variables: true
-  when: manual
-
-deploy-dev:
-  <<: *trigger_cd_job_base
-  variables:
-    ENV: dev
-    SERVICE_NAME: $CI_PROJECT_NAME
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-
-# --- FIX: Corrected the rules block here ---
-deploy-sit:
-  <<: *trigger_cd_job_base
-  variables:
-    ENV: sit
-    SERVICE_NAME: $CI_PROJECT_NAME
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
-      when: manual
-
-# --- FIX: Corrected the rules block here ---
-deploy-uat:
-  <<: *trigger_cd_job_base
-  variables:
-    ENV: uat
-    SERVICE_NAME: $CI_PROJECT_NAME
-  rules:
-    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
-      when: manual
-
-# --- FIX: Corrected the rules block here ---
-deploy-prod-dr:
-  <<: *trigger_cd_job_base
-  variables:
-    ENV: prod-dr
-    SERVICE_NAME: $CI_PROJECT_NAME
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      when: manual
-
-# --- FIX: Corrected the rules block here ---
-deploy-prod-dc:
-  <<: *trigger_cd_job_base
-  variables:
-    ENV: prod-dc
-    SERVICE_NAME: $CI_PROJECT_NAME
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      when: manual
-
-ata mora yml and mu sast ku comment kali abe pipiline validate hauni amiti error asuchi..
-
-This GitLab CI configuration is invalid: sast job: chosen stage test does not exist; available stages are .pre, build, sast, hp-fortify, release, dockerbuild, trigger_cd, deploy, .post.
+a mora sabu achi and mo pipe line logic tame janicha abe best step kuha kan haba...
