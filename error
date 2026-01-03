@@ -1,7 +1,19 @@
+dockerbuild:
+  stage: dockerbuild
+  script:
+    - echo "Building Docker image once for all non-prod"
+  rules:
     - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
       when: manual
-      allow_failure: true
       variables:
-        ENV: sit # Default for release branch is SIT
+        ENV: nonprod
         IMAGE_REGISTRY: ${SIT_IMAGE_REGISTRY}
         IMAGE_NAME: "${CHART_NAME}"
+_________________________________
+
+deploy-sit:
+  variables:
+    ENV: sit
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
