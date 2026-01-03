@@ -1,7 +1,8 @@
-public/runtime-config.js
+public/runtime-config.template.js
 
-_____________________________
+
+
 window.__RUNTIME_CONFIG__ = {
-  API_BASE_URL: "http://localhost:8080",
-  PREFIX_NAME: "/perfSimulator"
+  API_BASE_URL: "__API_BASE_URL__",
+  PREFIX_NAME: "__PREFIX_NAME__"
 };
