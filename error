@@ -1,86 +1,293 @@
-Running with gitlab-runner 17.8.0 (e4f782b3)
-  on DR-Gitlab-runner t1_CpKnL, system ID: s_5f020bf813e7
-Resolving secrets
-Preparing the "docker" executor
-00:04
-Using Docker executor with image registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 ...
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Using locally found image version due to "if-not-present" pull policy
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Pulling docker image registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 ...
-Using docker image sha256:c1037efa7a6cfce811caf269e33c408144a2058361edcd7ab9d99c1aa67433c8 for registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 with digest registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm@sha256:96ab8f99d7e94b7d955b4129daa1a36556977e216b5ff4b392c07e2d8a776e58 ...
-Preparing environment
-00:02
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Running on runner-t1cpknl-project-65-concurrent-1 via Gitlab-DR-Runr...
-Getting source from Git repository
-00:04
-$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
-Fetching changes with git depth set to 20...
-Initialized empty Git repository in /tmp/builds/epay/frontends/epay_perf_simulator/.git/
-Created fresh repository.
-Checking out a86cdb25 as detached HEAD (ref is release/perf)...
-Skipping Git submodules setup
-Executing "step_script" stage of the job script
-00:26
-Using docker image sha256:c1037efa7a6cfce811caf269e33c408144a2058361edcd7ab9d99c1aa67433c8 for registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 with digest registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm@sha256:96ab8f99d7e94b7d955b4129daa1a36556977e216b5ff4b392c07e2d8a776e58 ...
-$ echo "===== BUILD STARTED ====="
-===== BUILD STARTED =====
-$ pwd
-/tmp/builds/epay/frontends/epay_perf_simulator
-$ ls -la
-total 544
-drwxrwxrwx. 7 default root   4096 Dec 31 06:46 .
-drwxrwxrwx. 4 default root     64 Dec 31 06:46 ..
--rw-rw-rw-. 1 default root    288 Dec 31 06:46 .env
-drwxrwxrwx. 6 default root    128 Dec 31 06:46 .git
--rw-rw-rw-. 1 default root    287 Dec 31 06:46 .gitignore
--rw-rw-rw-. 1 default root    198 Dec 31 06:46 .gitlab-ci.yml
-drwxrwxrwx. 4 default root     44 Dec 31 06:46 .vite
--rw-rw-rw-. 1 default root    455 Dec 31 06:46 Dockerfile
--rw-rw-rw-. 1 default root   6233 Dec 31 06:46 README.md
--rw-rw-rw-. 1 default root    415 Dec 31 06:46 components.json
--rw-rw-rw-. 1 default root    734 Dec 31 06:46 eslint.config.js
--rw-rw-rw-. 1 default root   3538 Dec 31 06:46 index.css
--rw-rw-rw-. 1 default root    675 Dec 31 06:46 index.html
--rw-rw-rw-. 1 default root    409 Dec 31 06:46 jest.config.ts
--rw-rw-rw-. 1 default root     35 Dec 31 06:46 jest.setup.ts
--rw-rw-rw-. 1 default root   2088 Dec 31 06:46 nginx.conf
--rw-rw-rw-. 1 default root 466190 Dec 31 06:46 package-lock.json
--rw-rw-rw-. 1 default root   2369 Dec 31 06:46 package.json
--rw-rw-rw-. 1 default root     80 Dec 31 06:46 postcss.config.js
-drwxrwxrwx. 2 default root     72 Dec 31 06:46 public
-drwxrwxrwx. 6 default root    174 Dec 31 06:46 src
--rw-rw-rw-. 1 default root   2056 Dec 31 06:46 tailwind.config.js
-drwxrwxrwx. 3 default root     23 Dec 31 06:46 test
--rw-rw-rw-. 1 default root    823 Dec 31 06:46 tsconfig.app.json
--rw-rw-rw-. 1 default root    628 Dec 31 06:46 tsconfig.json
--rw-rw-rw-. 1 default root    479 Dec 31 06:46 tsconfig.node.json
--rw-rw-rw-. 1 default root    577 Dec 31 06:46 vite.config.ts
--rw-rw-rw-. 1 default root   2986 Dec 31 06:46 vite.config.ts.timestamp-1734693863164-ae63645a81b86.mjs
-$ npm config set proxy http://serverswg.sbi.co.in:80
-$ npm config set https-proxy http://serverswg.sbi.co.in:9090
-$ npm cache clean --force
-npm warn using --force Recommended protections disabled.
-$ npm ci || npm install
-npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
-npm warn deprecated domexception@4.0.0: Use your platform's native DOMException instead
-npm warn deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
-npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
-npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
-npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
-npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
-added 901 packages, and audited 902 packages in 17s
-95 packages are looking for funding
-  run `npm fund` for details
-14 vulnerabilities (2 low, 6 moderate, 5 high, 1 critical)
-To address all issues, run:
-  npm audit fix
-Run `npm audit` for details.
-$ npm run build
-> epayment-final@0.0.0 build
-> tsc -b && vite build
-src/core/lib/crytpo/rsa.ts(2,21): error TS2307: Cannot find module 'node-rsa' or its corresponding type declarations.
+sast.yml: 
+
+include:
+  - template: Jobs/SAST.latest.gitlab-ci.yml 
+
+sast: #Ovverride incuded job from SAST
+  stage: sast
+  variables:
+    GITLAB_ADVANCED_SAST_ENABLED: 'true'
+    SECURE_ANALYZERS_PREFIX: "$CI_TEMPLATE_REGISTRY_HOST/ubi9/security-products"
+    CI_TEMPLATE_REGISTRY_HOST: "registry.dev.sbiepay.sbi:8443"
+    DEFAULT_SAST_EXCLUDED_PATHS: "spec, test, tests, tmp"
+    SAST_EXCLUDED_PATHS: "$DEFAULT_SAST_EXCLUDED_PATHS"
+    SEARCH_MAX_DEPTH: 4  
+    SAST_ANALYZER_IMAGE_TAG: '1'
+
+gitlab-advanced-sast: #Ovverride incuded job from SAST
+  variables:
+    SAST_ANALYZER_IMAGE_TAG: '1'
+
+.sast:
+  stage: sast
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+
+.send-reports:
+  stage: sast
+  image: 
+    name: "$SAST_ANALYZER_IMAGE"
+    pull_policy: always
+  dependencies:
+    - sast
+  before_script:
+    - echo "This is the send-reports before_script"
+  script:
+    - echo "in send-reports job"
+    - ls
+  artifacts:
+    reports:
+      sast: gl-sast-report.json
+
+and its dynamic.yml:
+
+include:
+  # The dynamic.yml include was causing the error and is now replaced locally.
+  # - project: 'epay/devops/ci-templates'
+  #   ref: feature/CIfrontend
+  #   file: 'ci/build/dynamic.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/sast/sast.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/sast/fortify.sast.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/release/version.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/release/release.yml'
+    
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/build/podman.container.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/deploy/deployment.yml'
+
+# --- Stages (SINGLE DEFINITION) ---
+stages:
+  - build
+  # - test
+  - sast
+  - hp-fortify
+  - release
+  - dockerbuild
+  - trigger_cd
+  - deploy
+
+# --- Global Variables (SINGLE DEFINITION) ---
+variables:
+  CHART_NAME: "$CI_PROJECT_NAME"
+  VERSION: "${CI_COMMIT_SHORT_SHA}"
+  DEV_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9/"
+  SIT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
+  PROD_IMAGE_REGISTRY: "registry.prod.epay.sbi:8443/fe/"
+  GIT_STRATEGY: clone
+  CI_USERNAME: "gitlab-ci-token"
+  RELEASE_NAME: null
+  PODMAN_TLS_VERIFY: "false"
+
+# --- Hidden Templates for Reuse ---
+
+.build:
+  stage: build
+  image:
+    name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+    pull_policy: always
+  script:
+    - echo "===== BUILD STARTED ====="
+    - pwd
+    - ls -la
+    - npm config set proxy http://serverswg.sbi.co.in:80
+    - npm config set https-proxy http://serverswg.sbi.co.in:9090
+    - npm cache clean --force
+    - npm ci || npm install
+    - npm install --save-dev @types/node-rsa
+    - npm run build
+
+    - echo "===== BUILD COMPLETED ====="
+    - ls -la dist
+  artifacts:
+    paths:
+      - dist/
+    when: on_success
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+
+
+# --- SINGLE, UNIVERSAL BUILD JOB ---
+build:
+  extends: .build
+
+# --- TEST JOB ---
+# test:
+#   stage: test
+#   image:
+#     name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+#     pull_policy: always
+#   needs:
+#     - build
+#   script:
+#     - echo "=== RUNNING TESTS ==="
+#     - npm ci --prefer-offline
+#     - npm test
+#   rules:
+#     - when: on_success # Only run if the build job succeeded
+
+# --- SAST JOBS ---
+sast:
+  extends:
+    - .sast
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+      when: always
+    - when: never
+
+hp-fortify:
+  variables:
+    EXCLUDE_DIRS: "./**/dist/**/*"
+    INCLUDE_DIRS: "./**/*.tsx,./**/*.ts,./**/*.js"
+  extends:
+    - .HPFortify
+    # - .rules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+ 
+
+tag:
+  extends:
+    - .tag
+
+
+# --- CONTAINER BUILD JOB ---
+dockerbuild:
+  stage: dockerbuild
+  # needs:
+  #   - test
+  script: |
+    echo "--- Building Docker Image ---"
+    echo "Environment is: ${ENV}"
+    echo "Image Registry is: ${IMAGE_REGISTRY}"
+    echo "Image Name is: ${IMAGE_NAME}"
+    echo "Full image tag will be: ${IMAGE_REGISTRY}${IMAGE_NAME}:${VERSION}"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        ENV: dev
+        IMAGE_REGISTRY: ${DEV_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "dr"'
+      when: manual
+      allow_failure: true
+      variables:
+        ENV: prod
+        IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
+        IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
+        IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
+        IMAGE_NAME: "fe/${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "dc"'
+      when: manual
+      allow_failure: true
+      variables:
+        ENV: prod
+        IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
+        IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
+        IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
+        IMAGE_NAME: "fe/${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+      allow_failure: true
+      variables:
+        ENV: sit # Default for release branch is SIT
+        IMAGE_REGISTRY: ${SIT_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+
+# --- DEPLOY JOBS ---
+.trigger_cd_job_base: &trigger_cd_job_base
+  stage: trigger_cd
+  needs:
+    - dockerbuild
+  trigger:
+    project: epay/devops/deployment
+    branch: feature/dynamicnginx
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
+  when: manual
+
+deploy-dev:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: dev
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+# --- FIX: Corrected the rules block here ---
+deploy-sit:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: sit
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# --- FIX: Corrected the rules block here ---
+deploy-uat:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: uat
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# --- FIX: Corrected the rules block here ---
+deploy-prod-dr:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: prod-dr
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+# --- FIX: Corrected the rules block here ---
+deploy-prod-dc:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: prod-dc
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+
+and this my. .gitlabci.yml:
+
+include:
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'templates/fe/vite.react.yml'
+########
+variables:
+  RELEASE_NAME: perf
+  CHART_NAME: epay_perf_simulator
+
