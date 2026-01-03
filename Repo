@@ -1,0 +1,131 @@
+abe sabu file achi jouta mo frontend repore use hauchi : epay_perf_simulator
+________________________________________________________________________
+
+.env--
+VITE_BASE_URL="/perfSimulator"
+VITE_APP_BASE_URL="/perfSimulator"
+VITE_API_BASE_URL="https://perf.epay.sbi/api"
+BASE_URL="https://perf.epay.sbi"
+VITE_MOCK_API_BASE_URL="/perfSimulator"
+
+
+VITE_KEY_ID="/ZMrnWEDVNX4FTRsSmd2ng=="
+VITE_KEY_SECRET="0ot5ovBkyNw2rnyeADtjUNrCfY6HqEdCWhxa0Nonr6k="
+______________________________________________
+components.json:------
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "src/index.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  }
+}
+_______________________________________________________
+eslint.config.js
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
+
+export default tseslint.config(
+  { ignores: ['dist'] },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+    },
+  },
+)
+________________________________________________
+vite.config.ts:---
+import { defineConfig, loadEnv } from 'vite'
+import react from '@vitejs/plugin-react'
+import { resolve } from 'path';
+
+// https://vitejs.dev/config/
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  return {
+    define: {
+      'process.env': env
+    },
+    plugins: [react()],
+    base: '/perfSimulator',
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, './src')
+      }
+    },
+    build:{
+      target:'esnext',
+      rollupOptions:{
+        output:{
+          inlineDynamicImports:true
+        }
+      }
+    }
+  }
+})
+____________________________________________________________________
+vite.config.ts.timestamp-1734693863164-ae63645a81b86.mjs
+// vite.config.ts
+import { defineConfig, loadEnv } from "file:///D:/ePay-Projects/epay_transaction_fe/node_modules/vite/dist/node/index.js";
+import react from "file:///D:/ePay-Projects/epay_transaction_fe/node_modules/@vitejs/plugin-react/dist/index.mjs";
+import { resolve } from "path";
+var __vite_injected_original_dirname = "D:\\ePay-Projects\\epay_transaction_fe";
+var vite_config_default = defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  return {
+    define: {
+      "process.env": env
+    },
+    plugins: [react()],
+    base: "/perfSimulator",
+    resolve: {
+      alias: {
+        "@": resolve(__vite_injected_original_dirname, "./src")
+      }
+    },
+    build: {
+      target: "esnext",
+      rollupOptions: {
+        output: {
+          inlineDynamicImports: true
+        }
+      }
+    }
+  };
+});
+export {
+  vite_config_default as default
+};
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAic291cmNlcyI6IFsidml0ZS5jb25maWcudHMiXSwKICAic291cmNlc0NvbnRlbnQiOiBbImNvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9kaXJuYW1lID0gXCJEOlxcXFxlUGF5LVByb2plY3RzXFxcXGVwYXlfdHJhbnNhY3Rpb25fZmVcIjtjb25zdCBfX3ZpdGVfaW5qZWN0ZWRfb3JpZ2luYWxfZmlsZW5hbWUgPSBcIkQ6XFxcXGVQYXktUHJvamVjdHNcXFxcZXBheV90cmFuc2FjdGlvbl9mZVxcXFx2aXRlLmNvbmZpZy50c1wiO2NvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9pbXBvcnRfbWV0YV91cmwgPSBcImZpbGU6Ly8vRDovZVBheS1Qcm9qZWN0cy9lcGF5X3RyYW5zYWN0aW9uX2ZlL3ZpdGUuY29uZmlnLnRzXCI7aW1wb3J0IHsgZGVmaW5lQ29uZmlnLCBsb2FkRW52IH0gZnJvbSAndml0ZSdcclxuaW1wb3J0IHJlYWN0IGZyb20gJ0B2aXRlanMvcGx1Z2luLXJlYWN0J1xyXG5pbXBvcnQgeyByZXNvbHZlIH0gZnJvbSAncGF0aCc7XHJcblxyXG4vLyBodHRwczovL3ZpdGVqcy5kZXYvY29uZmlnL1xyXG5leHBvcnQgZGVmYXVsdCBkZWZpbmVDb25maWcoKHsgbW9kZSB9KSA9PiB7XHJcbiAgY29uc3QgZW52ID0gbG9hZEVudihtb2RlLCBwcm9jZXNzLmN3ZCgpLCAnJyk7XHJcbiAgcmV0dXJuIHtcclxuICAgIGRlZmluZToge1xyXG4gICAgICAncHJvY2Vzcy5lbnYnOiBlbnZcclxuICAgIH0sXHJcbiAgICBwbHVnaW5zOiBbcmVhY3QoKV0sXHJcbiAgICBiYXNlOiAnLzIuMCcsXHJcbiAgICByZXNvbHZlOiB7XHJcbiAgICAgIGFsaWFzOiB7XHJcbiAgICAgICAgJ0AnOiByZXNvbHZlKF9fZGlybmFtZSwgJy4vc3JjJylcclxuICAgICAgfVxyXG4gICAgfSxcclxuICAgIGJ1aWxkOntcclxuICAgICAgdGFyZ2V0Oidlc25leHQnLFxyXG4gICAgICByb2xsdXBPcHRpb25zOntcclxuICAgICAgICBvdXRwdXQ6e1xyXG4gICAgICAgICAgaW5saW5lRHluYW1pY0ltcG9ydHM6dHJ1ZVxyXG4gICAgICAgIH1cclxuICAgICAgfVxyXG4gICAgfVxyXG4gIH1cclxufSlcclxuIl0sCiAgIm1hcHBpbmdzIjogIjtBQUFvUyxTQUFTLGNBQWMsZUFBZTtBQUMxVSxPQUFPLFdBQVc7QUFDbEIsU0FBUyxlQUFlO0FBRnhCLElBQU0sbUNBQW1DO0FBS3pDLElBQU8sc0JBQVEsYUFBYSxDQUFDLEVBQUUsS0FBSyxNQUFNO0FBQ3hDLFFBQU0sTUFBTSxRQUFRLE1BQU0sUUFBUSxJQUFJLEdBQUcsRUFBRTtBQUMzQyxTQUFPO0FBQUEsSUFDTCxRQUFRO0FBQUEsTUFDTixlQUFlO0FBQUEsSUFDakI7QUFBQSxJQUNBLFNBQVMsQ0FBQyxNQUFNLENBQUM7QUFBQSxJQUNqQixNQUFNO0FBQUEsSUFDTixTQUFTO0FBQUEsTUFDUCxPQUFPO0FBQUEsUUFDTCxLQUFLLFFBQVEsa0NBQVcsT0FBTztBQUFBLE1BQ2pDO0FBQUEsSUFDRjtBQUFBLElBQ0EsT0FBTTtBQUFBLE1BQ0osUUFBTztBQUFBLE1BQ1AsZUFBYztBQUFBLFFBQ1osUUFBTztBQUFBLFVBQ0wsc0JBQXFCO0FBQUEsUUFDdkI7QUFBQSxNQUNGO0FBQUEsSUFDRjtBQUFBLEVBQ0Y7QUFDRixDQUFDOyIsCiAgIm5hbWVzIjogW10KfQo=
+
+
