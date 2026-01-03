@@ -1,9 +1,5 @@
-sast:
-  stage: sast
+workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      when: always
     - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
-      when: always
     - when: never
-this is my dyanamic.yml script 
