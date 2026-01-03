@@ -1,44 +1,9 @@
-Running with gitlab-runner 17.8.0 (e4f782b3)
-  on DR-Gitlab-runner t1_CpKnL, system ID: s_5f020bf813e7
-Resolving secrets
-Preparing the "docker" executor
-00:05
-Using Docker executor with image registry.dev.sbiepay.sbi:8443/library/podman:latest ...
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Pulling docker image registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest ...
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Pulling docker image registry.dev.sbiepay.sbi:8443/library/podman:latest ...
-Using docker image sha256:0b05fe47cd0b9224333c4534ba26af9e91f2d61f46cd0b833b4765abf5ede85a for registry.dev.sbiepay.sbi:8443/library/podman:latest with digest registry.dev.sbiepay.sbi:8443/library/podman@sha256:25e430bdecb8271dadafbc238b138218185efd0b771567285a12fda0c8e52a35 ...
-Preparing environment
-00:02
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Running on runner-t1cpknl-project-65-concurrent-0 via Gitlab-DR-Runr...
-Getting source from Git repository
-00:04
-$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
-Fetching changes with git depth set to 20...
-Initialized empty Git repository in /tmp/builds/epay/frontends/epay_perf_simulator/.git/
-Created fresh repository.
-Checking out ac2a1923 as detached HEAD (ref is release/perf)...
-Skipping Git submodules setup
-Downloading artifacts
-00:02
-Downloading artifacts for build (241241)...
-Downloading artifacts from coordinator... ok        id=241241 responseStatus=200 OK token=glcbt-64
-Executing "step_script" stage of the job script
-00:03
-Using docker image sha256:0b05fe47cd0b9224333c4534ba26af9e91f2d61f46cd0b833b4765abf5ede85a for registry.dev.sbiepay.sbi:8443/library/podman:latest with digest registry.dev.sbiepay.sbi:8443/library/podman@sha256:25e430bdecb8271dadafbc238b138218185efd0b771567285a12fda0c8e52a35 ...
-$ echo "$CI_JOB_NAME is used for configuration only, and its script should not be executed"
-sast is used for configuration only, and its script should not be executed
-$ exit 1
-Uploading artifacts for failed job
-00:02
-Uploading artifacts...
-WARNING: gl-sast-report.json: no matching files    
-ERROR: No files to upload                          
-Cleaning up project directory and file based variables
-00:03
-ERROR: Job failed: exit code 1
+sast:
+  stage: sast
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+      when: always
+    - when: never
+this is my dyanamic.yml script 
