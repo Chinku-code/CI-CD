@@ -1,5 +1,247 @@
-workflow:
+include:
+  # The dynamic.yml include was causing the error and is now replaced locally.
+  # - project: 'epay/devops/ci-templates'
+  #   ref: feature/CIfrontend
+  #   file: 'ci/build/dynamic.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/sast/sast.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/sast/fortify.sast.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/release/version.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/release/release.yml'
+    
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/build/podman.container.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/deploy/deployment.yml'
+
+# --- Stages (SINGLE DEFINITION) ---
+stages:
+  - build
+  # - test
+  - sast
+  - hp-fortify
+  - release
+  - dockerbuild
+  - trigger_cd
+  - deploy
+
+# --- Global Variables (SINGLE DEFINITION) ---
+variables:
+  CHART_NAME: "$CI_PROJECT_NAME"
+  VERSION: "${CI_COMMIT_SHORT_SHA}"
+  DEV_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9/"
+  SIT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
+  PROD_IMAGE_REGISTRY: "registry.prod.epay.sbi:8443/fe/"
+  GIT_STRATEGY: clone
+  CI_USERNAME: "gitlab-ci-token"
+  RELEASE_NAME: null
+  PODMAN_TLS_VERIFY: "false"
+
+# --- Hidden Templates for Reuse ---
+
+.build:
+  stage: build
+  image:
+    name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+    pull_policy: always
+  script:
+    - echo "===== BUILD STARTED ====="
+    - pwd
+    - ls -la
+    - npm config set proxy http://serverswg.sbi.co.in:80
+    - npm config set https-proxy http://serverswg.sbi.co.in:9090
+    - npm cache clean --force
+    - npm ci || npm install
+    - npm install --save-dev @types/node-rsa
+    - npm run build
+
+    - echo "===== BUILD COMPLETED ====="
+    - ls -la dist
+  artifacts:
+    paths:
+      - dist/
+    when: on_success
+    expire_in: 1 week
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
-    - when: never
+
+
+# --- SINGLE, UNIVERSAL BUILD JOB ---
+build:
+  extends: .build
+
+# --- TEST JOB ---
+# test:
+#   stage: test
+#   image:
+#     name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+#     pull_policy: always
+#   needs:
+#     - build
+#   script:
+#     - echo "=== RUNNING TESTS ==="
+#     - npm ci --prefer-offline
+#     - npm test
+#   rules:
+#     - when: on_success # Only run if the build job succeeded
+
+# --- SAST CONTROL ---
+# sast:
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+#     - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+#     - when: never
+
+
+# sast:
+#   extends:
+#     - .sast
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+#       when: always
+#     - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+#       when: always
+#     - when: never
+
+hp-fortify:
+  variables:
+    EXCLUDE_DIRS: "./**/dist/**/*"
+    INCLUDE_DIRS: "./**/*.tsx,./**/*.ts,./**/*.js"
+  extends:
+    - .HPFortify
+    # - .rules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+ 
+
+tag:
+  extends:
+    - .tag
+
+
+# --- CONTAINER BUILD JOB ---
+dockerbuild:
+  stage: dockerbuild
+  # needs:
+  #   - test
+  script: |
+    echo "--- Building Docker Image ---"
+    echo "Environment is: ${ENV}"
+    echo "Image Registry is: ${IMAGE_REGISTRY}"
+    echo "Image Name is: ${IMAGE_NAME}"
+    echo "Full image tag will be: ${IMAGE_REGISTRY}${IMAGE_NAME}:${VERSION}"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        ENV: dev
+        IMAGE_REGISTRY: ${DEV_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "dr"'
+      when: manual
+      allow_failure: true
+      variables:
+        ENV: prod
+        IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
+        IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
+        IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
+        IMAGE_NAME: "fe/${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "dc"'
+      when: manual
+      allow_failure: true
+      variables:
+        ENV: prod
+        IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
+        IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
+        IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
+        IMAGE_NAME: "fe/${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+      allow_failure: true
+      variables:
+        ENV: sit # Default for release branch is SIT
+        IMAGE_REGISTRY: ${SIT_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+
+# --- DEPLOY JOBS ---
+.trigger_cd_job_base: &trigger_cd_job_base
+  stage: trigger_cd
+  needs:
+    - dockerbuild
+  trigger:
+    project: epay/devops/deployment
+    branch: feature/dynamicnginx
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
+  when: manual
+
+deploy-dev:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: dev
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+# --- FIX: Corrected the rules block here ---
+deploy-sit:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: sit
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# --- FIX: Corrected the rules block here ---
+deploy-uat:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: uat
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# --- FIX: Corrected the rules block here ---
+deploy-prod-dr:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: prod-dr
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+# --- FIX: Corrected the rules block here ---
+deploy-prod-dc:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: prod-dc
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+ata mora yml and mu sast ku comment kali abe pipiline validate hauni amiti error asuchi..
+
+This GitLab CI configuration is invalid: sast job: chosen stage test does not exist; available stages are .pre, build, sast, hp-fortify, release, dockerbuild, trigger_cd, deploy, .post.
