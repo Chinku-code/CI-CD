@@ -1,0 +1,152 @@
+include:
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/sast/sast.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/sast/fortify.sast.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/release/version.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/release/release.yml'
+
+stages:
+  - build
+  - sast
+  - hp-fortify
+  - release
+  - dockerbuild
+  - deploy
+
+# ---------------- GLOBAL VARIABLES ----------------
+variables:
+  CHART_NAME: "$CI_PROJECT_NAME"
+  VERSION: "$CI_COMMIT_SHORT_SHA"
+
+  # Base Non-Prod Registry (SIT / UAT / PERF)
+  BASE_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library"
+
+  # Pre-Prod Registry
+  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe"
+
+  PODMAN_TLS_VERIFY: "false"
+  GIT_STRATEGY: clone
+
+# ---------------- BUILD ----------------
+build:
+  stage: build
+  image: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+  script:
+    - echo "===== BUILD STARTED ====="
+    - npm config set proxy http://serverswg.sbi.co.in:80
+    - npm config set https-proxy http://serverswg.sbi.co.in:9090
+    - npm cache clean --force
+    - npm ci || npm install
+    - npm install --save-dev @types/node-rsa
+    - npm run build
+    - echo "===== BUILD COMPLETED ====="
+    - ls -la dist
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|release\/.*)$/'
+
+# ---------------- SAST ----------------
+hp-fortify:
+  stage: hp-fortify
+  extends: .HPFortify
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|release\/.*)$/'
+
+# ---------------- DOCKER BUILD (SINGLE BUILD) ----------------
+dockerbuild:
+  stage: dockerbuild
+  image: registry.dev.sbiepay.sbi:8443/library/podman:latest
+  script:
+    - echo "Building image ${CHART_NAME}:${VERSION}"
+    - podman login -u $DEV_REGISTRY_USERNAME -p $DEV_REGISTRY_PASSWORD registry.dev.sbiepay.sbi:8443
+    - podman build -t ${CHART_NAME}:${VERSION} .
+    - podman tag ${CHART_NAME}:${VERSION} ${BASE_IMAGE_REGISTRY}/${CHART_NAME}:${VERSION}
+    - podman push ${BASE_IMAGE_REGISTRY}/${CHART_NAME}:${VERSION}
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|release\/.*)$/'
+
+# ---------------- DEPLOY TO SIT ----------------
+deploy-sit:
+  stage: deploy
+  trigger:
+    project: epay/devops/deployment
+    branch: main
+    strategy: depend
+  variables:
+    ENV: sit
+    IMAGE_TAG: $VERSION
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# ---------------- DEPLOY TO UAT ----------------
+deploy-uat:
+  stage: deploy
+  trigger:
+    project: epay/devops/deployment
+    branch: main
+    strategy: depend
+  variables:
+    ENV: uat
+    IMAGE_TAG: $VERSION
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# ---------------- DEPLOY TO PERF ----------------
+deploy-perf:
+  stage: deploy
+  trigger:
+    project: epay/devops/deployment
+    branch: main
+    strategy: depend
+  variables:
+    ENV: perf
+    IMAGE_TAG: $VERSION
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# ---------------- PROMOTE IMAGE TO PRE-PROD ----------------
+promote-image-pre-prod:
+  stage: deploy
+  image: registry.dev.sbiepay.sbi:8443/library/podman:latest
+  script:
+    - echo "Promoting image to Pre-Prod"
+    - podman login -u $DEV_REGISTRY_USERNAME -p $DEV_REGISTRY_PASSWORD registry.dev.sbiepay.sbi:8443
+    - podman login -u $PREPROD_REGISTRY_USERNAME -p $PREPROD_REGISTRY_PASSWORD epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
+    - podman pull ${BASE_IMAGE_REGISTRY}/${CHART_NAME}:${VERSION}
+    - podman tag ${BASE_IMAGE_REGISTRY}/${CHART_NAME}:${VERSION} ${PREPROD_IMAGE_REGISTRY}/${CHART_NAME}:${VERSION}
+    - podman push ${PREPROD_IMAGE_REGISTRY}/${CHART_NAME}:${VERSION}
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# ---------------- DEPLOY TO PRE-PROD ----------------
+deploy-pre-prod:
+  stage: deploy
+  needs:
+    - promote-image-pre-prod
+  trigger:
+    project: epay/devops/deployment
+    branch: main
+    strategy: depend
+  variables:
+    ENV: preprod
+    IMAGE_TAG: $VERSION
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
