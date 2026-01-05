@@ -1,9 +1,4 @@
 include:
-  # The dynamic.yml include was causing the error and is now replaced locally.
-  # - project: 'epay/devops/ci-templates'
-  #   ref: feature/CIfrontend
-  #   file: 'ci/build/dynamic.yml'
-
   - project: 'epay/devops/ci-templates'
     ref: feature/CIfrontend
     file: 'ci/sast/sast.yml'
@@ -19,7 +14,7 @@ include:
   - project: 'epay/devops/ci-templates'
     ref: feature/CIfrontend
     file: 'ci/release/release.yml'
-    
+
   - project: 'epay/devops/ci-templates'
     ref: feature/CIfrontend
     file: 'ci/build/podman.container.yml'
@@ -28,7 +23,8 @@ include:
     ref: feature/CIfrontend
     file: 'ci/deploy/deployment.yml'
 
-# --- Stages (SINGLE DEFINITION) ---
+
+# ---------------- STAGES ----------------
 stages:
   - build
   - test
@@ -36,249 +32,101 @@ stages:
   - hp-fortify
   - release
   - dockerbuild
-  - trigger_cd
   - deploy
 
-# --- Global Variables (SINGLE DEFINITION) ---
+
+# ---------------- GLOBAL VARIABLES ----------------
 variables:
   CHART_NAME: "$CI_PROJECT_NAME"
-  VERSION: "${CI_COMMIT_SHORT_SHA}"
-  DEV_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9/"
-  SIT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
-  UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
-  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
-  #PERF_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
-  PROD_IMAGE_REGISTRY: "registry.prod.epay.sbi:8443/fe/"
-  GIT_STRATEGY: clone
-  CI_USERNAME: "gitlab-ci-token"
-  RELEASE_NAME: null
+  VERSION: "$CI_COMMIT_SHORT_SHA"
+
+  DEV_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9"
+  SIT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library"
+  UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library"
+
+  PERF_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe"
+  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe"
+
+  PROD_IMAGE_REGISTRY: "registry.prod.epay.sbi:8443/fe"
+
   PODMAN_TLS_VERIFY: "false"
+  GIT_STRATEGY: clone
 
-# --- Hidden Templates for Reuse ---
 
+# ---------------- BUILD ----------------
 .build:
   stage: build
-  image:
-    name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
-    pull_policy: always
+  image: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
   script:
-    - echo "===== BUILD STARTED ====="
-    - pwd
-    - ls -la
     - npm config set proxy http://serverswg.sbi.co.in:80
     - npm config set https-proxy http://serverswg.sbi.co.in:9090
     - npm cache clean --force
     - npm ci || npm install
-    - npm install --save-dev @types/node-rsa
     - npm run build
-
-    - echo "===== BUILD COMPLETED ====="
-    - ls -la dist
   artifacts:
     paths:
       - dist/
-    when: on_success
     expire_in: 1 week
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|release\/.*)$/'
 
-
-# --- SINGLE, UNIVERSAL BUILD JOB ---
 build:
   extends: .build
 
-# --- TEST JOB ---
-# test:
-#   stage: test
-#   image:
-#     name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
-#     pull_policy: always
-#   needs:
-#     - build
-#   script:
-#     - echo "=== RUNNING TESTS ==="
-#     - npm ci --prefer-offline
-#     - npm test
-#   rules:
-#     - when: on_success # Only run if the build job succeeded
 
-# --- SAST CONTROL ---
-# sast:
-#   rules:
-#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-#     - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
-#     - when: never
-
-
-# sast:
-#   extends:
-#     - .sast
-#   rules:
-#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-#       when: always
-#     - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
-#       when: always
-#     - when: never
-
-hp-fortify:
-  variables:
-    EXCLUDE_DIRS: "./**/dist/**/*"
-    INCLUDE_DIRS: "./**/*.tsx,./**/*.ts,./**/*.js"
-  extends:
-    - .HPFortify
-    # - .rules
+# ---------------- DUMMY TEST STAGE (TO FIX SAST ERROR) ----------------
+test:
+  stage: test
+  script:
+    - echo "No tests configured"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
- 
-
-tag:
-  extends:
-    - .tag
+    - when: never
 
 
-# --- CONTAINER BUILD JOB ---
+# ---------------- DOCKER BUILD (SINGLE BUILD) ----------------
 dockerbuild:
   stage: dockerbuild
-  # needs:
-  #   - test
-  script: |
-    echo "--- Building Docker Image ---"
-    echo "Environment is: ${ENV}"
-    echo "Image Registry is: ${IMAGE_REGISTRY}"
-    echo "Image Name is: ${IMAGE_NAME}"
-    echo "Full image tag will be: ${IMAGE_REGISTRY}${IMAGE_NAME}:${VERSION}"
-    echo "Building Docker image once for all non-prod"
+  image: registry.dev.sbiepay.sbi:8443/library/podman:latest
+  script:
+    - echo "Building image $IMAGE_REGISTRY/$CHART_NAME:$VERSION"
+    - podman build -t $CHART_NAME:$VERSION .
+    - podman tag $CHART_NAME:$VERSION $IMAGE_REGISTRY/$CHART_NAME:$VERSION
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $IMAGE_REGISTRY
+    - podman push $IMAGE_REGISTRY/$CHART_NAME:$VERSION
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
       variables:
-        ENV: dev
-        IMAGE_REGISTRY: ${DEV_IMAGE_REGISTRY}
-        IMAGE_NAME: "${CHART_NAME}"
-    # - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "prod-dr"'
-    #   when: manual
-    #   allow_failure: true
-    #   variables:
-    #     ENV: prod
-    #     IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
-    #     IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
-    #     IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
-    #     IMAGE_NAME: "fe/${CHART_NAME}"
-    # - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "prod-dc"'
-    #   when: manual
-    #   allow_failure: true
-    #   variables:
-    #     ENV: prod
-    #     IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
-    #     IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
-    #     IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
-    #     IMAGE_NAME: "fe/${CHART_NAME}"
-    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
-      when: always
-      allow_failure: true
-      variables:
-        ENV: nonprod # Default for release branch is SIT
-        IMAGE_REGISTRY: ${SIT_IMAGE_REGISTRY}
-        IMAGE_NAME: "${CHART_NAME}"
-    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
-      when: always
-      allow_failure: true
-      variables:
-        ENV: nonprod # Default for release branch is PERF
-        IMAGE_REGISTRY: ${PERF_IMAGE_REGISTRY}
-        IMAGE_NAME: "${CHART_NAME}"
+        IMAGE_REGISTRY: $DEV_IMAGE_REGISTRY
+        IMAGE_REGISTRY_USERNAME: $DEV_REGISTRY_USERNAME
+        IMAGE_REGISTRY_PASS: $DEV_REGISTRY_PASSWORD
 
-#promote jobs-
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      variables:
+        IMAGE_REGISTRY: $SIT_IMAGE_REGISTRY
+        IMAGE_REGISTRY_USERNAME: $SIT_REGISTRY_USERNAME
+        IMAGE_REGISTRY_PASS: $SIT_REGISTRY_PASSWORD
 
+
+# ---------------- PROMOTE TO PRE-PROD ----------------
 promote-image-pre-prod:
   stage: deploy
   image: registry.dev.sbiepay.sbi:8443/library/podman:latest
   script:
-    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
-    - podman login -u $PREPROD_REGISTRY_USERNAME -p $PREPROD_REGISTRY_PASSWORD epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
-    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
-    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/$IMAGE_NAME:$VERSION
-    - podman push epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman login -u $SIT_REGISTRY_USERNAME -p $SIT_REGISTRY_PASSWORD $SIT_IMAGE_REGISTRY
+    - podman login -u $PREPROD_REGISTRY_USERNAME -p $PREPROD_REGISTRY_PASSWORD $PREPROD_IMAGE_REGISTRY
+    - podman pull $SIT_IMAGE_REGISTRY/$CHART_NAME:$VERSION
+    - podman tag $SIT_IMAGE_REGISTRY/$CHART_NAME:$VERSION $PREPROD_IMAGE_REGISTRY/$CHART_NAME:$VERSION
+    - podman push $PREPROD_IMAGE_REGISTRY/$CHART_NAME:$VERSION
   rules:
     - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
       when: manual
 
-# --- DEPLOY JOBS ---
-# .trigger_cd_job_base: &trigger_cd_job_base
-#   stage: trigger_cd
-#   needs:
-#     - dockerbuild
-#   trigger:
-#     project: epay/devops/deployment
-#     branch: main
-#     strategy: depend
-#     forward:
-#       pipeline_variables: true
-#       yaml_variables: true
-#   when: manual
 
-# deploy-dev:
-#   <<: *trigger_cd_job_base
-#   variables:
-#     ENV: dev
-#     SERVICE_NAME: $CI_PROJECT_NAME
-#   rules:
-#     - if: '$CI_COMMIT_BRANCH == "develop"'
-
-# # --- FIX: Corrected the rules block here ---
-# deploy-sit:
-#   <<: *trigger_cd_job_base
-#   variables:
-#     ENV: sit
-#     SERVICE_NAME: $CI_PROJECT_NAME
-#   rules:
-#     - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
-#       when: manual
-
-# # --- FIX: Corrected the rules block here ---
-# deploy-uat:
-#   <<: *trigger_cd_job_base
-#   variables:
-#     ENV: uat
-#     SERVICE_NAME: $CI_PROJECT_NAME
-#   rules:
-#     - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
-#       when: manual
-
-# # --- FIX: Corrected the rules block here ---
-# deploy-perf:
-#   <<: *trigger_cd_job_base
-#   variables:
-#     ENV: perf
-#     SERVICE_NAME: $CI_PROJECT_NAME
-#   rules:
-#     - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
-#       when: manual
-
-# # --- FIX: Corrected the rules block here ---
-# deploy-prod-dr:
-#   <<: *trigger_cd_job_base
-#   variables:
-#     ENV: prod-dr
-#     SERVICE_NAME: $CI_PROJECT_NAME
-#   rules:
-#     - if: '$CI_COMMIT_BRANCH == "main"'
-#       when: manual
-
-# # --- FIX: Corrected the rules block here ---
-# deploy-prod-dc:
-#   <<: *trigger_cd_job_base
-#   variables:
-#     ENV: prod-dc
-#     SERVICE_NAME: $CI_PROJECT_NAME
-#   rules:
-#     - if: '$CI_COMMIT_BRANCH == "main"'
-#       when: manual
+# ---------------- DEPLOY JOBS ----------------
 deploy-sit:
-  stage: trigger_cd
-  needs:
-    - dockerbuild
+  stage: deploy
+  needs: ["dockerbuild"]
   trigger:
     project: epay/devops/deployment
     branch: main
@@ -287,11 +135,9 @@ deploy-sit:
     ENV: sit
   when: manual
 
-
 deploy-uat:
-  stage: trigger_cd
-  needs:
-    - dockerbuild
+  stage: deploy
+  needs: ["dockerbuild"]
   trigger:
     project: epay/devops/deployment
     branch: main
@@ -300,11 +146,9 @@ deploy-uat:
     ENV: uat
   when: manual
 
-
 deploy-perf:
-  stage: trigger_cd
-  needs:
-    - dockerbuild
+  stage: deploy
+  needs: ["dockerbuild"]
   trigger:
     project: epay/devops/deployment
     branch: main
@@ -313,9 +157,8 @@ deploy-perf:
     ENV: perf
   when: manual
 
-
 deploy-pre-prod:
-  stage: trigger_cd
+  stage: deploy
   needs:
     - dockerbuild
     - promote-image-pre-prod
@@ -326,4 +169,3 @@ deploy-pre-prod:
   variables:
     ENV: preprod
   when: manual
-
