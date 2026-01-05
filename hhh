@@ -57,3 +57,232 @@ Uploading artifacts as "dotenv" to coordinator... ok  id=242834 responseStatus=2
 Cleaning up project directory and file based variables
 00:02
 Job succeeded
+---------------------------------
+
+build:---------
+
+Running with gitlab-runner 17.8.0 (e4f782b3)
+  on DR-Gitlab-runner t1_CpKnL, system ID: s_5f020bf813e7
+Resolving secrets
+Preparing the "docker" executor
+00:05
+Using Docker executor with image registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Pulling docker image registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest ...
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Pulling docker image registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 ...
+Using docker image sha256:c1037efa7a6cfce811caf269e33c408144a2058361edcd7ab9d99c1aa67433c8 for registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 with digest registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm@sha256:96ab8f99d7e94b7d955b4129daa1a36556977e216b5ff4b392c07e2d8a776e58 ...
+Preparing environment
+00:02
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Running on runner-t1cpknl-project-65-concurrent-0 via Gitlab-DR-Runr...
+Getting source from Git repository
+00:04
+$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
+Fetching changes with git depth set to 20...
+Initialized empty Git repository in /tmp/builds/epay/frontends/epay_perf_simulator/.git/
+Created fresh repository.
+Checking out 63428dd5 as detached HEAD (ref is release/perf)...
+Skipping Git submodules setup
+Executing "step_script" stage of the job script
+00:35
+Using docker image sha256:c1037efa7a6cfce811caf269e33c408144a2058361edcd7ab9d99c1aa67433c8 for registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113 with digest registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm@sha256:96ab8f99d7e94b7d955b4129daa1a36556977e216b5ff4b392c07e2d8a776e58 ...
+$ echo "===== BUILD STARTED ====="
+===== BUILD STARTED =====
+$ pwd
+/tmp/builds/epay/frontends/epay_perf_simulator
+$ ls -la
+total 544
+drwxrwxrwx. 7 default root   4096 Jan  5 08:44 .
+drwxrwxrwx. 4 default root     64 Jan  5 08:44 ..
+-rw-rw-rw-. 1 default root    288 Jan  5 08:44 .env
+drwxrwxrwx. 6 default root    128 Jan  5 08:44 .git
+-rw-rw-rw-. 1 default root    287 Jan  5 08:44 .gitignore
+-rw-rw-rw-. 1 default root    202 Jan  5 08:44 .gitlab-ci.yml
+drwxrwxrwx. 4 default root     44 Jan  5 08:44 .vite
+-rw-rw-rw-. 1 default root   1311 Jan  5 08:44 Dockerfile
+-rw-rw-rw-. 1 default root   6233 Jan  5 08:44 README.md
+-rw-rw-rw-. 1 default root    415 Jan  5 08:44 components.json
+-rw-rw-rw-. 1 default root    734 Jan  5 08:44 eslint.config.js
+-rw-rw-rw-. 1 default root   3538 Jan  5 08:44 index.css
+-rw-rw-rw-. 1 default root    752 Jan  5 08:44 index.html
+-rw-rw-rw-. 1 default root    409 Jan  5 08:44 jest.config.ts
+-rw-rw-rw-. 1 default root     35 Jan  5 08:44 jest.setup.ts
+-rw-rw-rw-. 1 default root   2088 Jan  5 08:44 nginx.conf
+-rw-rw-rw-. 1 default root 466190 Jan  5 08:44 package-lock.json
+-rw-rw-rw-. 1 default root   2369 Jan  5 08:44 package.json
+-rw-rw-rw-. 1 default root     80 Jan  5 08:44 postcss.config.js
+drwxrwxrwx. 2 default root    106 Jan  5 08:44 public
+drwxrwxrwx. 6 default root    174 Jan  5 08:44 src
+-rw-rw-rw-. 1 default root   2056 Jan  5 08:44 tailwind.config.js
+drwxrwxrwx. 3 default root     23 Jan  5 08:44 test
+-rw-rw-rw-. 1 default root    823 Jan  5 08:44 tsconfig.app.json
+-rw-rw-rw-. 1 default root    628 Jan  5 08:44 tsconfig.json
+-rw-rw-rw-. 1 default root    479 Jan  5 08:44 tsconfig.node.json
+-rw-rw-rw-. 1 default root    577 Jan  5 08:44 vite.config.ts
+-rw-rw-rw-. 1 default root   2986 Jan  5 08:44 vite.config.ts.timestamp-1734693863164-ae63645a81b86.mjs
+$ npm config set proxy http://serverswg.sbi.co.in:80
+$ npm config set https-proxy http://serverswg.sbi.co.in:9090
+$ npm cache clean --force
+npm warn using --force Recommended protections disabled.
+$ npm ci || npm install
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated domexception@4.0.0: Use your platform's native DOMException instead
+npm warn deprecated abab@2.0.6: Use your platform's native atob() and btoa() methods instead
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+added 901 packages, and audited 902 packages in 13s
+95 packages are looking for funding
+  run `npm fund` for details
+14 vulnerabilities (2 low, 6 moderate, 5 high, 1 critical)
+To address all issues, run:
+  npm audit fix
+Run `npm audit` for details.
+$ npm install --save-dev @types/node-rsa
+added 1 package, and audited 903 packages in 3s
+95 packages are looking for funding
+  run `npm fund` for details
+14 vulnerabilities (2 low, 6 moderate, 5 high, 1 critical)
+To address all issues, run:
+  npm audit fix
+Run `npm audit` for details.
+$ npm run build
+> epayment-final@0.0.0 build
+> tsc -b && vite build
+vite v5.4.9 building for production...
+<script src="/runtime-config.js"> in "/index.html" can't be bundled without type="module" attribute
+transforming...
+Browserslist: caniuse-lite is outdated. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+../epay_merchant_simulator/src/assets/background.png referenced in ../epay_merchant_simulator/src/assets/background.png didn't resolve at build time, it will remain unchanged to be resolved at runtime
+✓ 1648 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                            0.89 kB │ gzip:  0.50 kB
+dist/assets/successPayment-DKFrd79K.svg    6.02 kB │ gzip:  2.33 kB
+dist/assets/summary-icon-CrTDLeNa.png     18.13 kB
+dist/assets/index-hzm1Qf_b.css            21.71 kB │ gzip:  5.23 kB
+dist/assets/index-BOj64Vtv.js            228.00 kB │ gzip: 77.25 kB
+✓ built in 3.74s
+$ echo "===== BUILD COMPLETED ====="
+===== BUILD COMPLETED =====
+$ ls -la dist
+total 32
+drwxr-xr-x. 3 default root   138 Jan  5 08:44 .
+drwxrwxrwx. 9 default root  4096 Jan  5 08:44 ..
+drwxr-xr-x. 2 default root   125 Jan  5 08:44 assets
+-rw-r--r--. 1 default root   890 Jan  5 08:44 index.html
+-rw-rw-rw-. 1 default root   104 Jan  5 08:44 runtime-config.template.js
+-rw-rw-rw-. 1 default root 10030 Jan  5 08:44 sbi-logo-skyblue.png
+-rw-rw-rw-. 1 default root  2580 Jan  5 08:44 sbi_images.png
+-rw-rw-rw-. 1 default root  1497 Jan  5 08:44 vite.svg
+Uploading artifacts for successful job
+00:02
+Uploading artifacts...
+dist/: found 11 matching files and directories     
+Uploading artifacts as "archive" to coordinator... ok  id=242835 responseStatus=201 Created token=glcbt-64
+Cleaning up project directory and file based variables
+00:03
+Job succeeded
+_______________________
+relese.tag :____________
+
+Running with gitlab-runner 17.8.0 (e4f782b3)
+  on DR-Gitlab-runner t1_CpKnL, system ID: s_5f020bf813e7
+Resolving secrets
+Preparing the "docker" executor
+00:05
+Using Docker executor with image registry.dev.sbiepay.sbi:8443/library/rhelgit:latest ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Pulling docker image registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest ...
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Pulling docker image registry.dev.sbiepay.sbi:8443/library/rhelgit:latest ...
+Using docker image sha256:cc9b278413b4f7940e4ec53a72ef8389e1f78fe99aeb20c8af62f14e706074d4 for registry.dev.sbiepay.sbi:8443/library/rhelgit:latest with digest registry.dev.sbiepay.sbi:8443/library/rhelgit@sha256:8576ae23d4f1ae2cc0e30d6c1b401fee3a2386faab50c58e97b726c3dc028d09 ...
+Preparing environment
+00:02
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Running on runner-t1cpknl-project-65-concurrent-0 via Gitlab-DR-Runr...
+Getting source from Git repository
+00:04
+$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
+Fetching changes with git depth set to 20...
+Initialized empty Git repository in /tmp/builds/epay/frontends/epay_perf_simulator/.git/
+Created fresh repository.
+Checking out 63428dd5 as detached HEAD (ref is release/perf)...
+Skipping Git submodules setup
+Downloading artifacts
+00:02
+Downloading artifacts for build (242835)...
+Downloading artifacts from coordinator... ok        id=242835 responseStatus=200 OK token=glcbt-64
+Executing "step_script" stage of the job script
+00:04
+Using docker image sha256:cc9b278413b4f7940e4ec53a72ef8389e1f78fe99aeb20c8af62f14e706074d4 for registry.dev.sbiepay.sbi:8443/library/rhelgit:latest with digest registry.dev.sbiepay.sbi:8443/library/rhelgit@sha256:8576ae23d4f1ae2cc0e30d6c1b401fee3a2386faab50c58e97b726c3dc028d09 ...
+$ git config --global http.sslVerify false
+$ git config --global --add safe.directory '*'
+$ git config --global user.name "ci"
+$ git config --global user.email "ci.cedge@sbi.co.in"
+$ git remote set-url origin https://gitlab-ci-token:$GIT_PAT@gitlab.epay.sbi/$CI_PROJECT_PATH.git
+$ git tag "$VERSION"
+$ git push origin "$VERSION"
+To https://gitlab.epay.sbi/epay/frontends/epay_perf_simulator.git
+ * [new tag]         v-release-perf-20260105084351 -> v-release-perf-20260105084351
+Cleaning up project directory and file based variables
+00:02
+Job succeeded
+
+_____________________________
+
+docker build :____
+
+Running with gitlab-runner 17.8.0 (e4f782b3)
+  on DR-Gitlab-runner t1_CpKnL, system ID: s_5f020bf813e7
+Resolving secrets
+Preparing the "docker" executor
+00:05
+Using Docker executor with image registry.dev.sbiepay.sbi:8443/library/podman:latest ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Pulling docker image registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest ...
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Pulling docker image registry.dev.sbiepay.sbi:8443/library/podman:latest ...
+Using docker image sha256:0b05fe47cd0b9224333c4534ba26af9e91f2d61f46cd0b833b4765abf5ede85a for registry.dev.sbiepay.sbi:8443/library/podman:latest with digest registry.dev.sbiepay.sbi:8443/library/podman@sha256:25e430bdecb8271dadafbc238b138218185efd0b771567285a12fda0c8e52a35 ...
+Preparing environment
+00:03
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Running on runner-t1cpknl-project-65-concurrent-0 via Gitlab-DR-Runr...
+Getting source from Git repository
+00:04
+$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
+Fetching changes with git depth set to 20...
+Initialized empty Git repository in /tmp/builds/epay/frontends/epay_perf_simulator/.git/
+Created fresh repository.
+Checking out 63428dd5 as detached HEAD (ref is release/perf)...
+Skipping Git submodules setup
+Downloading artifacts
+00:02
+Downloading artifacts for build (242835)...
+Downloading artifacts from coordinator... ok        id=242835 responseStatus=200 OK token=glcbt-64
+Executing "step_script" stage of the job script
+00:02
+Using docker image sha256:0b05fe47cd0b9224333c4534ba26af9e91f2d61f46cd0b833b4765abf5ede85a for registry.dev.sbiepay.sbi:8443/library/podman:latest with digest registry.dev.sbiepay.sbi:8443/library/podman@sha256:25e430bdecb8271dadafbc238b138218185efd0b771567285a12fda0c8e52a35 ...
+$ echo "--- Building Docker Image ---" # collapsed multi-line command
+--- Building Docker Image ---
+Environment is: nonprod
+Image Registry is: registry.dev.sbiepay.sbi:8443/library/
+Image Name is: epay_perf_simulator
+Full image tag will be: registry.dev.sbiepay.sbi:8443/library/epay_perf_simulator:v-release-perf-20260105084351
+Building Docker image once for all non-prod
+Cleaning up project directory and file based variables
+00:03
+Job succeeded
