@@ -1,43 +1,21 @@
-dockerbuild:
-  stage: dockerbuild
-  image: registry.dev.sbiepay.sbi:8443/library/podman:latest
+promote-image-pre-prod:
+  stage: deploy
+  variables:
+    REGISTRY_USERNAME: $PREPROD_REGISTRY_USERNAME
+    REGISTRY_PASSWORD: $PREPROD_REGISTRY_PASSWORD
+    TARGET_IMAGE_NAME: "microservices/$CHART_NAME"
   script:
-    - |
-      echo "--- Docker Build & Push START ---"
-      echo "Environment: ${ENV}"
-      echo "Image: ${IMAGE_REGISTRY}/fe/${IMAGE_NAME}:${VERSION}"
-
-      echo "Logging into registry..."
-      podman login ${IMAGE_REGISTRY} \
-        -u "${IMAGE_REGISTRY_USERNAME}" \
-        -p "${IMAGE_REGISTRY_PASS}"
-
-      echo "Building image..."
-      podman build -t ${IMAGE_NAME}:${VERSION} .
-
-      echo "Tagging image..."
-      podman tag ${IMAGE_NAME}:${VERSION} \
-        ${IMAGE_REGISTRY}/fe/${IMAGE_NAME}:${VERSION}
-
-      echo "Pushing image..."
-      podman push ${IMAGE_REGISTRY}/fe/${IMAGE_NAME}:${VERSION}
-
-      echo "--- Docker Build & Push DONE ---"
-
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - podman login -u microservices+preprod -p Y37PK8H33NIJVND7HA68OJQZX776SKHPP81XI7BQ94JH92UAJ1GVA144GPYC9PGU epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
+    #- podman login -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD $CI_TEMPLATE_REGISTRY_HOST_PREPROD --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION $CI_TEMPLATE_REGISTRY_HOST_PREPROD/$TARGET_IMAGE_NAME:$VERSION
+    - podman push $CI_TEMPLATE_REGISTRY_HOST_PREPROD/$TARGET_IMAGE_NAME:$VERSION --tls-verify=false
   rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      variables:
-        ENV: dev
-        IMAGE_REGISTRY: ${DEV_IMAGE_REGISTRY}
-        IMAGE_NAME: "${CHART_NAME}"
-        IMAGE_REGISTRY_USERNAME: $DEV_REGISTRY_USERNAME
-        IMAGE_REGISTRY_PASS: $DEV_REGISTRY_PASSWORD
-
-    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
-      when: always
-      variables:
-        ENV: nonprod
-        IMAGE_REGISTRY: ${PERF_IMAGE_REGISTRY}
-        IMAGE_NAME: "${CHART_NAME}"
-        IMAGE_REGISTRY_USERNAME: $PERF_REGISTRY_USERNAME
-        IMAGE_REGISTRY_PASS: $PERF_REGISTRY_PASSWORD
+    - if: $CI_COMMIT_BRANCH =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^(release)(\/.+)*$/
+      when: manual
+      allow_failure: true
+    - when: never
