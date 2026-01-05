@@ -1,69 +1,84 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "epayperfsimulator.fullname" . }}
-  labels:
-    {{- include "epayperfsimulator.labels" . | nindent 4 }}
+Docker bild steps:___
 
-spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
+dockerbuild:
+  stage: dockerbuild
+  # needs:
+  #   - test
+  script: |
+    echo "--- Building Docker Image ---"
+    echo "Environment is: ${ENV}"
+    echo "Image Registry is: ${IMAGE_REGISTRY}"
+    echo "Image Name is: ${IMAGE_NAME}"
+    echo "Full image tag will be: ${IMAGE_REGISTRY}${IMAGE_NAME}:${VERSION}"
+    echo "Building Docker image once for all non-prod"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        ENV: dev
+        IMAGE_REGISTRY: ${DEV_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+    # - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "prod-dr"'
+    #   when: manual
+    #   allow_failure: true
+    #   variables:
+    #     ENV: prod
+    #     IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
+    #     IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
+    #     IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
+    #     IMAGE_NAME: "fe/${CHART_NAME}"
+    # - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "prod-dc"'
+    #   when: manual
+    #   allow_failure: true
+    #   variables:
+    #     ENV: prod
+    #     IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
+    #     IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
+    #     IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
+    #     IMAGE_NAME: "fe/${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: always
+      allow_failure: true
+      variables:
+        ENV: nonprod # Default for release branch is SIT
+        IMAGE_REGISTRY: ${SIT_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: always
+      allow_failure: true
+      variables:
+        ENV: nonprod # Default for release branch is PERF
+        IMAGE_REGISTRY: ${PERF_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+______________________________________________________
 
-  selector:
-    matchLabels:
-      {{- include "epayperfsimulator.selectorLabels" . | nindent 6 }}
+dockerfile:--
 
-  template:
-    metadata:
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/path: "/actuator/prometheus"
-        prometheus.io/port: "{{ .Values.service.port }}"
-        {{- with .Values.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-      labels:
-        {{- include "epayperfsimulator.selectorLabels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
 
-    spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+FROM registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1754404361
 
-      serviceAccountName: {{ include "epayperfsimulator.serviceAccountName" . }}
+USER 0
 
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+# Create app directory
+RUN mkdir -p /usr/share/nginx/html/merchantsimulator
 
-      containers:
-        - name: {{ .Chart.Name }}
+# Copy frontend build
+COPY ./dist/ /usr/share/nginx/html/merchantsimulator
 
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
+# Copy runtime config template (IMPORTANT)
+COPY ./dist/runtime-config.template.js /usr/share/nginx/html/merchantsimulator/runtime-config.template.js
 
-          image: "{{ tpl .Values.image.repository $ }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
 
-          env:
-            - name: API_BASE_URL
-              value: "{{ .Values.apiBaseUrl }}"
-            - name: PREFIX_NAME
-              value: "{{ .Values.prefixName }}"
+RUN chmod 755 -R /usr/share/nginx/html/merchantsimulator \
+    && chown -R nginx:nginx /usr/share/nginx/html/merchantsimulator
 
-          ports:
-            - name: http
-              containerPort: {{ .Values.service.port }}
-              protocol: TCP
 
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+COPY ./nginx.conf /etc/nginx/nginx.conf
 
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+EXPOSE 8080/tcp
+
+# Generate runtime-config.js from env vars and start nginx
+CMD ["/bin/sh", "-c", \
+  "envsubst < /usr/share/nginx/html/merchantsimulator/runtime-config.template.js \
+  > /usr/share/nginx/html/merchantsimulator/runtime-config.js && \
+  /usr/sbin/nginx -g 'daemon off;'"]
+
