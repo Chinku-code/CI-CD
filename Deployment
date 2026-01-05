@@ -1,0 +1,143 @@
+Values.yml-----
+
+replicaCount: 1
+
+image:
+  repository: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/{{ .Chart.Name }}"
+  pullPolicy: IfNotPresent
+  tag: "v-0808251925"
+
+imagePullSecrets:
+  - name: fe-fe-pull-secret
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount: {}
+podAnnotations: {}
+podLabels: {}
+podSecurityContext: {}
+securityContext: {}
+
+configMap:
+  additionalLabels: {}
+  annotations: {}
+  nameSuffix: "config"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+namespace: perf-simulators
+gatewayName: perf-istio-system/perf-gateway
+virtualServiceName: perf-perfsimulator
+serviceName: perf-perfsimulator
+prefixName: /perfSimulator/
+servicePort: 8080
+gatewayPort: 80
+gatewayHost: "perf.epay.sbi"
+
+resources: {}
+ingress: {}
+
+# Disable health probes for perf (frontend doesn't need health checks)
+readinessProbe:
+  enabled: false
+livenessProbe:
+  enabled: false
+
+# HPA Configuration
+hpa:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+
+autoscaling:
+  enabled: true
+
+
+# Mount configuration for frontend
+volumes:
+  - name: config-volume
+    configMap:
+      name: transaction-fe-config
+      
+volumeMounts:
+  - name: config-volume
+    mountPath: "/app/config"
+    readOnly: true
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+_________________________
+
+deployment.yml----
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "epayperfsimulator.fullname" . }}
+  labels:
+    {{- include "epayperfsimulator.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "epayperfsimulator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "{{ .Values.service.port }}"
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "epayperfsimulator.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "epayperfsimulator.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ tpl .Values.image.repository $ }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
