@@ -1,0 +1,12 @@
+promote-image-pre-prod:
+  stage: deploy
+  image: registry.dev.sbiepay.sbi:8443/library/podman:latest
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - podman login -u $PREPROD_REGISTRY_USERNAME -p $PREPROD_REGISTRY_PASSWORD epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/$IMAGE_NAME:$VERSION
+    - podman push epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/$IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
