@@ -1,116 +1,20 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "epayperfsimulator.fullname" . }}
-  labels:
-    {{- include "epayperfsimulator.labels" . | nindent 4 }}
-spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
-  selector:
-    matchLabels:
-      {{- include "epayperfsimulator.selectorLabels" . | nindent 6 }}
-  template:
-    metadata:
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/path: "/actuator/prometheus"
-        prometheus.io/port: "{{ .Values.service.port }}"
-        {{- with .Values.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-      labels:
-        {{- include "epayperfsimulator.selectorLabels" . | nindent 8 }}
-        {{- with .Values.podLabels }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
-    spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      serviceAccountName: {{ include "epayperfsimulator.serviceAccountName" . }}
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      containers:
-        - name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ tpl .Values.image.repository $ }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+containers:
+  - name: {{ .Chart.Name }}
+    securityContext:
+      {{- toYaml .Values.securityContext | nindent 12 }}
+    image: "{{ tpl .Values.image.repository $ }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+    imagePullPolicy: {{ .Values.image.pullPolicy }}
 
-#env set#####################################################
+    env:
+      - name: API_BASE_URL
+        value: "{{ .Values.apiBaseUrl }}"
+      - name: PREFIX_NAME
+        value: "{{ .Values.prefixName }}"
 
-		      env:
-            - name: API_BASE_URL
-              value: "{{ .Values.apiBaseUrl }}"
-            - name: PREFIX_NAME
-              value: "{{ .Values.prefixName }}"
-###############################################################
-          ports:
-            - name: http
-              containerPort: {{ .Values.service.port }}
-              protocol: TCP
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+    ports:
+      - name: http
+        containerPort: {{ .Values.service.port }}
+        protocol: TCP
 
-this is the deployment yml i changed as per you..
-
-
-and this is the error.. 
-
-Running with gitlab-runner 17.8.0 (e4f782b3)
-  on DR-Gitlab-runner t1_CpKnL, system ID: s_5f020bf813e7
-Resolving secrets
-Preparing the "docker" executor
-00:05
-Using Docker executor with image registry.dev.sbiepay.sbi:8443/ubi9/ochelm:03122024 ...
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Pulling docker image registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest ...
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Pulling docker image registry.dev.sbiepay.sbi:8443/ubi9/ochelm:03122024 ...
-Using docker image sha256:e35c3559b44abd0dfdbb0d2452de990630985a9f95782c3f92357d62e1f6db71 for registry.dev.sbiepay.sbi:8443/ubi9/ochelm:03122024 with digest registry.dev.sbiepay.sbi:8443/ubi9/ochelm@sha256:f3dea1ca55cf5f37fb762cce33f16f409e63c9ad14aa203c83963ff73244c54c ...
-Preparing environment
-00:02
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Running on runner-t1cpknl-project-23-concurrent-0 via Gitlab-DR-Runr...
-Getting source from Git repository
-00:09
-$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
-Fetching changes...
-Initialized empty Git repository in /tmp/builds/epay/devops/deployment/.git/
-Created fresh repository.
-Checking out cc4ba8eb as detached HEAD (ref is feature/CICD_test)...
-Skipping Git submodules setup
-Executing "step_script" stage of the job script
-00:04
-Using docker image sha256:e35c3559b44abd0dfdbb0d2452de990630985a9f95782c3f92357d62e1f6db71 for registry.dev.sbiepay.sbi:8443/ubi9/ochelm:03122024 with digest registry.dev.sbiepay.sbi:8443/ubi9/ochelm@sha256:f3dea1ca55cf5f37fb762cce33f16f409e63c9ad14aa203c83963ff73244c54c ...
-$ set -eo pipefail # collapsed multi-line command
-Using namespace: perf-simulators
-PREPROD_TOKEN
-Logging into OpenShift cluster...
-WARNING: Using insecure TLS client config. Setting this option is not supported!
-Logged into "https://api.preprod.epay.sbi:6443" as "system:serviceaccount:default:cicd-sa" using the token provided.
-You have access to 146 projects, the list has been suppressed. You can list all projects with 'oc projects'
-Using project "default".
-Welcome! See 'oc help' to get started.
-Successfully switched to namespace perf-simulators
-$ set -eo pipefail # collapsed multi-line command
-Deploying "perf" to perf-simulators...
-Chart path: /tmp/builds/epay/devops/deployment/perf/charts/epay_perf_simulator
-Executing: helm upgrade --install "perf" /tmp/builds/epay/devops/deployment/perf/charts/epay_perf_simulator   --namespace perf-simulators   --history-max 10   --timeout 15m
-Error: UPGRADE FAILED: YAML parse error on perfsimulator/templates/deployment.yaml: error converting YAML to JSON: yaml: line 40: found character that cannot start any token
-Error: Helm deployment failed
-Last 5 revisions:
-Error: release name is invalid: "perf"
-Cleaning up project directory and file based variables
-00:02
-ERROR: Job failed: exit code 1
+    resources:
+      {{- toYaml .Values.resources | nindent 12 }}
