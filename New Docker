@@ -2,27 +2,27 @@ dockerbuild:
   stage: dockerbuild
   image: registry.dev.sbiepay.sbi:8443/library/podman:latest
   script:
-    - echo "--- Docker Build & Push START ---"
-    - echo "Environment: ${ENV}"
-    - echo "Image: ${IMAGE_REGISTRY}/fe/${IMAGE_NAME}:${VERSION}"
+    - |
+      echo "--- Docker Build & Push START ---"
+      echo "Environment: ${ENV}"
+      echo "Image: ${IMAGE_REGISTRY}/fe/${IMAGE_NAME}:${VERSION}"
 
-    # Login to registry (HOST ONLY)
-    - podman login ${IMAGE_REGISTRY} \
-        -u ${IMAGE_REGISTRY_USERNAME} \
-        -p ${IMAGE_REGISTRY_PASS}
+      echo "Logging into registry..."
+      podman login ${IMAGE_REGISTRY} \
+        -u "${IMAGE_REGISTRY_USERNAME}" \
+        -p "${IMAGE_REGISTRY_PASS}"
 
-    # Build image once
-    - podman build -t ${IMAGE_NAME}:${VERSION} .
+      echo "Building image..."
+      podman build -t ${IMAGE_NAME}:${VERSION} .
 
-    # Tag image for target registry + repo
-    - podman tag ${IMAGE_NAME}:${VERSION} \
+      echo "Tagging image..."
+      podman tag ${IMAGE_NAME}:${VERSION} \
         ${IMAGE_REGISTRY}/fe/${IMAGE_NAME}:${VERSION}
 
-    # Push image
-    - podman push \
-        ${IMAGE_REGISTRY}/fe/${IMAGE_NAME}:${VERSION}
+      echo "Pushing image..."
+      podman push ${IMAGE_REGISTRY}/fe/${IMAGE_NAME}:${VERSION}
 
-    - echo "--- Docker Build & Push DONE ---"
+      echo "--- Docker Build & Push DONE ---"
 
   rules:
     - if: '$CI_COMMIT_BRANCH == "develop"'
