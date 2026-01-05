@@ -1,0 +1,59 @@
+Running with gitlab-runner 17.8.0 (e4f782b3)
+  on DR-Gitlab-runner t1_CpKnL, system ID: s_5f020bf813e7
+Resolving secrets
+Preparing the "docker" executor
+00:05
+Using Docker executor with image registry.dev.sbiepay.sbi:8443/library/rhelgit:latest ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Pulling docker image registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest ...
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Pulling docker image registry.dev.sbiepay.sbi:8443/library/rhelgit:latest ...
+Using docker image sha256:cc9b278413b4f7940e4ec53a72ef8389e1f78fe99aeb20c8af62f14e706074d4 for registry.dev.sbiepay.sbi:8443/library/rhelgit:latest with digest registry.dev.sbiepay.sbi:8443/library/rhelgit@sha256:8576ae23d4f1ae2cc0e30d6c1b401fee3a2386faab50c58e97b726c3dc028d09 ...
+Preparing environment
+00:03
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Running on runner-t1cpknl-project-65-concurrent-0 via Gitlab-DR-Runr...
+Getting source from Git repository
+00:03
+$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
+Fetching changes with git depth set to 20...
+Initialized empty Git repository in /tmp/builds/epay/frontends/epay_perf_simulator/.git/
+Created fresh repository.
+Checking out 63428dd5 as detached HEAD (ref is release/perf)...
+Skipping Git submodules setup
+Executing "step_script" stage of the job script
+00:04
+Using docker image sha256:cc9b278413b4f7940e4ec53a72ef8389e1f78fe99aeb20c8af62f14e706074d4 for registry.dev.sbiepay.sbi:8443/library/rhelgit:latest with digest registry.dev.sbiepay.sbi:8443/library/rhelgit@sha256:8576ae23d4f1ae2cc0e30d6c1b401fee3a2386faab50c58e97b726c3dc028d09 ...
+$ git config --global http.sslVerify false
+$ git config --global --add safe.directory '*'
+$ handle_error() { # collapsed multi-line command
+Starting version generation for branch: release/perf
+From https://gitlab.epay.sbi/epay/frontends/epay_perf_simulator
+ * [new branch]      develop                -> origin/develop
+ * [new branch]      feature/EPS-1_perfApiChanges -> origin/feature/EPS-1_perfApiChanges
+ * [new branch]      feature/EPS-1_perf_sim -> origin/feature/EPS-1_perf_sim
+ * [new branch]      main                   -> origin/main
+Processing feature branch versioning...
+Feature branch version: v-release-perf-20260105084351
+SUCCESS: New version generated: v-release-perf-20260105084351
+Version information saved to version.env
+=== Version Generation Summary ===
+Generated Version: v-release-perf-20260105084351
+Version Type: PATCH
+Branch: release/perf
+Timestamp: 2026-01-05T08:43:51Z
+==================================
+Uploading artifacts for successful job
+00:03
+Uploading artifacts...
+WARNING: version_error.log: no matching files      
+ERROR: No files to upload                          
+Uploading artifacts...
+version.env: found 1 matching files and directories 
+Uploading artifacts as "dotenv" to coordinator... ok  id=242834 responseStatus=201 Created token=glcbt-64
+Cleaning up project directory and file based variables
+00:02
+Job succeeded
