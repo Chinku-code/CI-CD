@@ -2,7 +2,7 @@ Running with gitlab-runner 17.8.0 (e4f782b3)
   on DC-Gitlab-Runner rMTQxLq3, system ID: s_948d0ccb739a
 Resolving secrets
 Preparing the "docker" executor
-00:06
+00:04
 Using Docker executor with image registry.dev.sbiepay.sbi:8443/library/podman:latest ...
 Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
 Using locally found image version due to "if-not-present" pull policy
@@ -12,7 +12,7 @@ Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a8
 Using locally found image version due to "if-not-present" pull policy
 Using docker image sha256:0b05fe47cd0b9224333c4534ba26af9e91f2d61f46cd0b833b4765abf5ede85a for registry.dev.sbiepay.sbi:8443/library/podman:latest with digest registry.dev.sbiepay.sbi:8443/library/podman@sha256:25e430bdecb8271dadafbc238b138218185efd0b771567285a12fda0c8e52a35 ...
 Preparing environment
-00:03
+00:05
 Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
 Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
 Running on runner-rmtqxlq3-project-65-concurrent-0 via Gitlab-DC-Runr...
@@ -26,21 +26,21 @@ Checking out 06cb36f8 as detached HEAD (ref is release/perf)...
 Skipping Git submodules setup
 Downloading artifacts
 00:03
-Downloading artifacts for build (244341)...
-Downloading artifacts from coordinator... ok        id=244341 responseStatus=200 OK token=glcbt-64
+Downloading artifacts for build (244294)...
+Downloading artifacts from coordinator... ok        id=244294 responseStatus=200 OK token=glcbt-64
 Executing "step_script" stage of the job script
-00:03
+00:04
 Using docker image sha256:0b05fe47cd0b9224333c4534ba26af9e91f2d61f46cd0b833b4765abf5ede85a for registry.dev.sbiepay.sbi:8443/library/podman:latest with digest registry.dev.sbiepay.sbi:8443/library/podman@sha256:25e430bdecb8271dadafbc238b138218185efd0b771567285a12fda0c8e52a35 ...
 $ podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
-time="2026-01-06T09:23:49Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
+time="2026-01-06T09:08:20Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
 Login Succeeded!
 $ podman login -u='fe+fe' -p='V5Y4REDI009UD0IET816WCCY0CZD9KTZY6TOZEWIH4WFMZCCSFTMTXP6BPBTE2D6' epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
-time="2026-01-06T09:23:50Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
+time="2026-01-06T09:08:20Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
 Login Succeeded!
 $ podman pull $SIT_IMAGE_REGISTRY/$CHART_NAME:$VERSION --tls-verify=false
-time="2026-01-06T09:23:50Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
-Trying to pull registry.dev.sbiepay.sbi:8443/ubi9/epay_perf_simulator:v-release-perf-20260106091944...
-Error: initializing source docker://registry.dev.sbiepay.sbi:8443/ubi9/epay_perf_simulator:v-release-perf-20260106091944: reading manifest v-release-perf-20260106091944 in registry.dev.sbiepay.sbi:8443/ubi9/epay_perf_simulator: name unknown: repository not found
+time="2026-01-06T09:08:21Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
+Trying to pull registry.dev.sbiepay.sbi:8443/library/epay_perf_simulator:v-release-perf-20260106090429...
+Error: initializing source docker://registry.dev.sbiepay.sbi:8443/library/epay_perf_simulator:v-release-perf-20260106090429: reading manifest v-release-perf-20260106090429 in registry.dev.sbiepay.sbi:8443/library/epay_perf_simulator: name unknown: repository not found
 Cleaning up project directory and file based variables
-00:03
+00:02
 ERROR: Job failed: exit code 1
