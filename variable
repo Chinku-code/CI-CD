@@ -83,3 +83,12 @@ promote-image-pre-prod:
       when: manual
 ---------------------------------
 we using this variable for microservice to push images kindly correct my ci as per this variable logic ..
+
+
+
+-------------------------------------------------------------
+
+    - podman pull $SIT_IMAGE_REGISTRY/$CHART_NAME:$VERSION --tls-verify=false
+    - podman tag  $SIT_IMAGE_REGISTRY/$CHART_NAME:$VERSION \
+                  $PREPROD_IMAGE_REGISTRY/$CHART_NAME:$VERSION
+    - podman push $PREPROD_IMAGE_REGISTRY/$CHART_NAME:$VERSION --tls-verify=false
