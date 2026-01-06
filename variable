@@ -1,0 +1,84 @@
+variables. ----
+
+variables:
+  CHART_NAME: "$CI_PROJECT_NAME"
+  VERSION: "${CI_COMMIT_SHORT_SHA}"
+  DEV_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9/"
+  SIT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
+  #PERF_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
+  PROD_IMAGE_REGISTRY: "registry.prod.epay.sbi:8443/fe/"
+  GIT_STRATEGY: clone
+  CI_USERNAME: "gitlab-ci-token"
+  RELEASE_NAME: null
+  PODMAN_TLS_VERIFY: "false"
+
+---------------------------------------
+docker build ----
+
+dockerbuild:
+  stage: dockerbuild
+  # needs:
+  #   - test
+  script: |
+    echo "--- Building Docker Image ---"
+    echo "Environment is: ${ENV}"
+    echo "Image Registry is: ${IMAGE_REGISTRY}"
+    echo "Image Name is: ${IMAGE_NAME}"
+    echo "Full image tag will be: ${IMAGE_REGISTRY}${IMAGE_NAME}:${VERSION}"
+    echo "Building Docker image once for all non-prod"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+      variables:
+        ENV: dev
+        IMAGE_REGISTRY: ${DEV_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+    # - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "prod-dr"'
+    #   when: manual
+    #   allow_failure: true
+    #   variables:
+    #     ENV: prod
+    #     IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
+    #     IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
+    #     IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
+    #     IMAGE_NAME: "fe/${CHART_NAME}"
+    # - if: '$CI_COMMIT_BRANCH == "main" && $DEPLOY_TO == "prod-dc"'
+    #   when: manual
+    #   allow_failure: true
+    #   variables:
+    #     ENV: prod
+    #     IMAGE_REGISTRY: ${PROD_IMAGE_REGISTRY}
+    #     IMAGE_REGISTRY_USERNAME: $PROD_REGISTRY_USERNAME
+    #     IMAGE_REGISTRY_PASS: $PROD_REGISTRY_PASSWORD
+    #     IMAGE_NAME: "fe/${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: always
+      allow_failure: true
+      variables:
+        ENV: nonprod # Default for release branch is SIT
+        IMAGE_REGISTRY: ${SIT_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: always
+      allow_failure: true
+      variables:
+        ENV: nonprod # Default for release branch is PERF
+        IMAGE_REGISTRY: ${PERF_IMAGE_REGISTRY}
+        IMAGE_NAME: "${CHART_NAME}"
+----------------------------------------------
+#promote jobs-
+
+promote-image-pre-prod:
+  stage: deploy
+  image: registry.dev.sbiepay.sbi:8443/library/podman:latest
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - podman login -u $PREPROD_REGISTRY_USERNAME -p $PREPROD_REGISTRY_PASSWORD epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/$IMAGE_NAME:$VERSION
+    - podman push epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/$IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+---------------------------------
