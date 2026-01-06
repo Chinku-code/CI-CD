@@ -1,1 +1,84 @@
-This GitLab CI configuration is invalid: sast job: chosen stage test does not exist; available stages are .pre, build, sast, hp-fortify, release, dockerbuild, deploy, .post.
+promote-image-pre-prod:
+  stage: deploy
+  image: registry.dev.sbiepay.sbi:8443/library/podman:latest
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - podman login -u $PREPROD_REGISTRY_USERNAME -p $PREPROD_REGISTRY_PASSWORD epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
+    - podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+    - podman tag $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/$IMAGE_NAME:$VERSION
+    - podman push epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/$IMAGE_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# --- DEPLOY JOBS ---
+.trigger_cd_job_base: &trigger_cd_job_base
+  stage: trigger_cd
+  needs:
+    - dockerbuild
+  trigger:
+    project: epay/devops/deployment
+    branch: main
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
+  when: manual
+
+deploy-dev:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: dev
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+# --- FIX: Corrected the rules block here ---
+deploy-sit:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: sit
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# --- FIX: Corrected the rules block here ---
+deploy-uat:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: uat
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# --- FIX: Corrected the rules block here ---
+deploy-perf:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: perf
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
+
+# --- FIX: Corrected the rules block here ---
+deploy-prod-dr:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: prod-dr
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+
+# --- FIX: Corrected the rules block here ---
+deploy-prod-dc:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: prod-dc
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
