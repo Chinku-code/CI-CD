@@ -1,31 +1,22 @@
-dockerbuild:
-  stage: dockerbuild
+promote-image-pre-prod:
+  stage: deploy
   image: registry.dev.sbiepay.sbi:8443/library/podman:latest
-  needs:
-    - build
+  variables:
+    SOURCE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library"
+    IMAGE_NAME: "$CI_PROJECT_NAME"
   script:
-    - echo "=== Docker Build Started ==="
-    - echo "ENV=$ENV"
-    - echo "IMAGE=${IMAGE_REGISTRY}/${CHART_NAME}:${VERSION}"
+    - echo "Pulling image from SIT registry"
+    - echo "Image: ${SOURCE_REGISTRY}/${IMAGE_NAME}:${VERSION}"
 
-    # Login to source registry
-    - podman login -u $CI_USERNAME -p $CI_JOB_TOKEN registry.dev.sbiepay.sbi:8443 --tls-verify=false
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS registry.dev.sbiepay.sbi:8443 --tls-verify=false
+    - podman login -u $PREPROD_REGISTRY_USERNAME -p $PREPROD_REGISTRY_PASSWORD \
+        epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
 
-    # Build
-    - podman build -t ${IMAGE_REGISTRY}/${CHART_NAME}:${VERSION} .
-
-    # Push
-    - podman push ${IMAGE_REGISTRY}/${CHART_NAME}:${VERSION} --tls-verify=false
-
-    - echo "=== Docker Build Completed ==="
+    - podman pull ${SOURCE_REGISTRY}/${IMAGE_NAME}:${VERSION} --tls-verify=false
+    - podman tag  ${SOURCE_REGISTRY}/${IMAGE_NAME}:${VERSION} \
+                  ${PREPROD_IMAGE_REGISTRY}/${IMAGE_NAME}:${VERSION}
+    - podman push ${PREPROD_IMAGE_REGISTRY}/${IMAGE_NAME}:${VERSION} --tls-verify=false
 
   rules:
-    - if: '$CI_COMMIT_BRANCH == "develop"'
-      variables:
-        ENV: dev
-        IMAGE_REGISTRY: $DEV_IMAGE_REGISTRY
-
     - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
-      variables:
-        ENV: sit
-        IMAGE_REGISTRY: $SIT_IMAGE_REGISTRY
+      when: manual
