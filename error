@@ -1,5 +1,144 @@
-Docker bild steps:___
+include:
+  # The dynamic.yml include was causing the error and is now replaced locally.
+  # - project: 'epay/devops/ci-templates'
+  #   ref: feature/CIfrontend
+  #   file: 'ci/build/dynamic.yml'
 
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/sast/sast.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: main
+    file: 'ci/sast/fortify.sast.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/release/version.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/release/release.yml'
+    
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/build/podman.container.yml'
+
+  - project: 'epay/devops/ci-templates'
+    ref: feature/CIfrontend
+    file: 'ci/deploy/deployment.yml'
+
+# --- Stages (SINGLE DEFINITION) ---
+stages:
+  - build
+  - test
+  - sast
+  - hp-fortify
+  - release
+  - dockerbuild
+  - trigger_cd
+  - deploy
+
+# --- Global Variables (SINGLE DEFINITION) ---
+variables:
+  CHART_NAME: "$CI_PROJECT_NAME"
+  VERSION: "${CI_COMMIT_SHORT_SHA}"
+  DEV_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/ubi9/"
+  SIT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  UAT_IMAGE_REGISTRY: "registry.dev.sbiepay.sbi:8443/library/"
+  PREPROD_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
+  #PERF_IMAGE_REGISTRY: "epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi/fe/"
+  PROD_IMAGE_REGISTRY: "registry.prod.epay.sbi:8443/fe/"
+  GIT_STRATEGY: clone
+  CI_USERNAME: "gitlab-ci-token"
+  RELEASE_NAME: null
+  PODMAN_TLS_VERIFY: "false"
+
+# --- Hidden Templates for Reuse ---
+
+.build:
+  stage: build
+  image:
+    name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+    pull_policy: always
+  script:
+    - echo "===== BUILD STARTED ====="
+    - pwd
+    - ls -la
+    - npm config set proxy http://serverswg.sbi.co.in:80
+    - npm config set https-proxy http://serverswg.sbi.co.in:9090
+    - npm cache clean --force
+    - npm ci || npm install
+    - npm install --save-dev @types/node-rsa
+    - npm run build
+
+    - echo "===== BUILD COMPLETED ====="
+    - ls -la dist
+  artifacts:
+    paths:
+      - dist/
+    when: on_success
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+
+
+# --- SINGLE, UNIVERSAL BUILD JOB ---
+build:
+  extends: .build
+
+# --- TEST JOB ---
+# test:
+#   stage: test
+#   image:
+#     name: registry.dev.sbiepay.sbi:8443/ubi9/reactjs_npm:20241113
+#     pull_policy: always
+#   needs:
+#     - build
+#   script:
+#     - echo "=== RUNNING TESTS ==="
+#     - npm ci --prefer-offline
+#     - npm test
+#   rules:
+#     - when: on_success # Only run if the build job succeeded
+
+# --- SAST CONTROL ---
+# sast:
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+#     - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+#     - when: never
+
+
+# sast:
+#   extends:
+#     - .sast
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+#       when: always
+#     - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+#       when: always
+#     - when: never
+
+hp-fortify:
+  variables:
+    EXCLUDE_DIRS: "./**/dist/**/*"
+    INCLUDE_DIRS: "./**/*.tsx,./**/*.ts,./**/*.js"
+  extends:
+    - .HPFortify
+    # - .rules
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH =~ /^(develop|main|release\/.*)$/'
+ 
+
+tag:
+  extends:
+    - .tag
+
+
+# --- CONTAINER BUILD JOB ---
 dockerbuild:
   stage: dockerbuild
   # needs:
@@ -49,36 +188,140 @@ dockerbuild:
         ENV: nonprod # Default for release branch is PERF
         IMAGE_REGISTRY: ${PERF_IMAGE_REGISTRY}
         IMAGE_NAME: "${CHART_NAME}"
-______________________________________________________
 
-dockerfile:--
+#promote jobs-
 
+promote-image-pre-prod:
+  stage: deploy
+  image: registry.dev.sbiepay.sbi:8443/library/podman:latest
+  script:
+    - podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+    - podman login -u='fe+fe' -p='V5Y4REDI009UD0IET816WCCY0CZD9KTZY6TOZEWIH4WFMZCCSFTMTXP6BPBTE2D6' epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
+    - podman pull $SIT_IMAGE_REGISTRY/$CHART_NAME:$VERSION --tls-verify=false
+    - podman tag  $SIT_IMAGE_REGISTRY/$CHART_NAME:$VERSION \
+                  $PREPROD_IMAGE_REGISTRY/$CHART_NAME:$VERSION
+    - podman push $PREPROD_IMAGE_REGISTRY/$CHART_NAME:$VERSION --tls-verify=false
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
 
-FROM registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1754404361
+# --- DEPLOY JOBS ---
+.trigger_cd_job_base: &trigger_cd_job_base
+  stage: trigger_cd
+  needs:
+    - dockerbuild
+  trigger:
+    project: epay/devops/deployment
+    branch: main
+    strategy: depend
+    forward:
+      pipeline_variables: true
+      yaml_variables: true
+  when: manual
 
-USER 0
+deploy-dev:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: dev
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop"'
 
-# Create app directory
-RUN mkdir -p /usr/share/nginx/html/merchantsimulator
+# --- FIX: Corrected the rules block here ---
+deploy-sit:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: sit
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
 
-# Copy frontend build
-COPY ./dist/ /usr/share/nginx/html/merchantsimulator
+# --- FIX: Corrected the rules block here ---
+deploy-uat:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: uat
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
 
-# Copy runtime config template (IMPORTANT)
-COPY ./dist/runtime-config.template.js /usr/share/nginx/html/merchantsimulator/runtime-config.template.js
+# --- FIX: Corrected the rules block here ---
+deploy-perf:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: perf
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
+      when: manual
 
+# --- FIX: Corrected the rules block here ---
+deploy-prod-dr:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: prod-dr
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
 
-RUN chmod 755 -R /usr/share/nginx/html/merchantsimulator \
-    && chown -R nginx:nginx /usr/share/nginx/html/merchantsimulator
+# --- FIX: Corrected the rules block here ---
+deploy-prod-dc:
+  <<: *trigger_cd_job_base
+  variables:
+    ENV: prod-dc
+    SERVICE_NAME: $CI_PROJECT_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: manual
+-----------------------------------------------------
 
+we facing this error .
 
-COPY ./nginx.conf /etc/nginx/nginx.conf
-
-EXPOSE 8080/tcp
-
-# Generate runtime-config.js from env vars and start nginx
-CMD ["/bin/sh", "-c", \
-  "envsubst < /usr/share/nginx/html/merchantsimulator/runtime-config.template.js \
-  > /usr/share/nginx/html/merchantsimulator/runtime-config.js && \
-  /usr/sbin/nginx -g 'daemon off;'"]
-
+Running with gitlab-runner 17.8.0 (e4f782b3)
+  on DC-Gitlab-Runner rMTQxLq3, system ID: s_948d0ccb739a
+Resolving secrets
+Preparing the "docker" executor
+00:05
+Using Docker executor with image registry.dev.sbiepay.sbi:8443/library/podman:latest ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using locally found image version due to "if-not-present" pull policy
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Using locally found image version due to "if-not-present" pull policy
+Using docker image sha256:0b05fe47cd0b9224333c4534ba26af9e91f2d61f46cd0b833b4765abf5ede85a for registry.dev.sbiepay.sbi:8443/library/podman:latest with digest registry.dev.sbiepay.sbi:8443/library/podman@sha256:25e430bdecb8271dadafbc238b138218185efd0b771567285a12fda0c8e52a35 ...
+Preparing environment
+00:02
+Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
+Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
+Running on runner-rmtqxlq3-project-65-concurrent-0 via Gitlab-DC-Runr...
+Getting source from Git repository
+00:05
+$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
+Fetching changes with git depth set to 20...
+Initialized empty Git repository in /tmp/builds/epay/frontends/epay_perf_simulator/.git/
+Created fresh repository.
+Checking out 1a4fbf87 as detached HEAD (ref is release/perf)...
+Skipping Git submodules setup
+Downloading artifacts
+00:03
+Downloading artifacts for build (243968)...
+Downloading artifacts from coordinator... ok        id=243968 responseStatus=200 OK token=glcbt-64
+Executing "step_script" stage of the job script
+00:03
+Using docker image sha256:0b05fe47cd0b9224333c4534ba26af9e91f2d61f46cd0b833b4765abf5ede85a for registry.dev.sbiepay.sbi:8443/library/podman:latest with digest registry.dev.sbiepay.sbi:8443/library/podman@sha256:25e430bdecb8271dadafbc238b138218185efd0b771567285a12fda0c8e52a35 ...
+$ podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
+time="2026-01-06T07:23:43Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
+Login Succeeded!
+$ podman login -u='fe+fe' -p='V5Y4REDI009UD0IET816WCCY0CZD9KTZY6TOZEWIH4WFMZCCSFTMTXP6BPBTE2D6' epaynonprod-registry-quay-quay-enterprise.apps.preprod.epay.sbi --tls-verify=false
+time="2026-01-06T07:23:43Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
+Login Succeeded!
+$ podman pull $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$VERSION --tls-verify=false
+time="2026-01-06T07:23:44Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
+Error: parsing reference "registry.dev.sbiepay.sbi:8443/:v-release-perf-20260106064716": invalid reference format
+Cleaning up project directory and file based variables
+00:03
+ERROR: Job failed: exit code 1
