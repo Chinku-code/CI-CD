@@ -82,3 +82,4 @@ promote-image-pre-prod:
     - if: '$CI_COMMIT_BRANCH =~ /^release\/.*$/'
       when: manual
 ---------------------------------
+we using this variable for microservice to push images kindly correct my ci as per this variable logic ..
