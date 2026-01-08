@@ -1,91 +1,38 @@
-Running with gitlab-runner 17.8.0 (e4f782b3)
-  on DC-Gitlab-Runner rMTQxLq3, system ID: s_948d0ccb739a
-Resolving secrets
-Preparing the "docker" executor
-00:07
-Using Docker executor with image registry.dev.sbiepay.sbi:8443/library/podman:latest ...
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Using locally found image version due to "if-not-present" pull policy
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Using locally found image version due to "if-not-present" pull policy
-Using docker image sha256:0b05fe47cd0b9224333c4534ba26af9e91f2d61f46cd0b833b4765abf5ede85a for registry.dev.sbiepay.sbi:8443/library/podman:latest with digest registry.dev.sbiepay.sbi:8443/library/podman@sha256:25e430bdecb8271dadafbc238b138218185efd0b771567285a12fda0c8e52a35 ...
-Preparing environment
-00:04
-Using helper image:  registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest  (overridden, default would be  registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:x86_64-v17.8.0 )
-Using docker image sha256:c95744588b6d7e170a6866854932de40eaf1b5ed229ed818cba6a87a1f885773 for registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper:latest with digest registry.dev.sbiepay.sbi:8443/library/gitlab-runner-helper@sha256:ebbf1c21e4272ae1f8c18b034d390809c836c2fc68c0f0f6d3a5aff9760aabf5 ...
-Running on runner-rmtqxlq3-project-65-concurrent-0 via Gitlab-DC-Runr...
-Getting source from Git repository
-00:04
-$ git config --global http.proxy $HTTP_PROXY; git config --global https.proxy $HTTPS_PROXY; git config --global no.proxy $NO_PROXY
-Fetching changes with git depth set to 20...
-Initialized empty Git repository in /tmp/builds/epay/frontends/epay_perf_simulator/.git/
-Created fresh repository.
-Checking out 28c8bc94 as detached HEAD (ref is release/perf)...
-Skipping Git submodules setup
-Downloading artifacts
-00:03
-Downloading artifacts for build (247087)...
-Downloading artifacts from coordinator... ok        id=247087 responseStatus=200 OK token=glcbt-64
-Executing "step_script" stage of the job script
-00:54
-Using docker image sha256:0b05fe47cd0b9224333c4534ba26af9e91f2d61f46cd0b833b4765abf5ede85a for registry.dev.sbiepay.sbi:8443/library/podman:latest with digest registry.dev.sbiepay.sbi:8443/library/podman@sha256:25e430bdecb8271dadafbc238b138218185efd0b771567285a12fda0c8e52a35 ...
-$ ls -ltrh
-total 528K
-drwxr-xr-x. 3 1001 root  138 Jan  8 09:54 dist
--rw-rw-rw-. 1 1001 root  415 Jan  8 09:54 components.json
--rw-rw-rw-. 1 1001 root 6.1K Jan  8 09:54 README.md
--rw-rw-rw-. 1 1001 root 1.3K Jan  8 09:54 Dockerfile
--rw-rw-rw-. 1 1001 root  409 Jan  8 09:54 jest.config.ts
--rw-rw-rw-. 1 1001 root  752 Jan  8 09:54 index.html
--rw-rw-rw-. 1 1001 root 3.5K Jan  8 09:54 index.css
--rw-rw-rw-. 1 1001 root  734 Jan  8 09:54 eslint.config.js
--rw-rw-rw-. 1 1001 root 1.4K Jan  8 09:54 nginx.conf
--rw-rw-rw-. 1 1001 root   35 Jan  8 09:54 jest.setup.ts
--rw-rw-rw-. 1 1001 root 456K Jan  8 09:54 package-lock.json
--rw-rw-rw-. 1 1001 root   80 Jan  8 09:54 postcss.config.js
--rw-rw-rw-. 1 1001 root 2.4K Jan  8 09:54 package.json
-drwxrwxrwx. 2 1001 root  106 Jan  8 09:54 public
--rw-rw-rw-. 1 1001 root 2.1K Jan  8 09:54 tailwind.config.js
-drwxrwxrwx. 6 1001 root  174 Jan  8 09:54 src
--rw-rw-rw-. 1 1001 root  479 Jan  8 09:54 tsconfig.node.json
--rw-rw-rw-. 1 1001 root  628 Jan  8 09:54 tsconfig.json
--rw-rw-rw-. 1 1001 root  823 Jan  8 09:54 tsconfig.app.json
-drwxrwxrwx. 3 1001 root   23 Jan  8 09:54 test
--rw-rw-rw-. 1 1001 root 3.0K Jan  8 09:54 vite.config.ts.timestamp-1734693863164-ae63645a81b86.mjs
--rw-rw-rw-. 1 1001 root  577 Jan  8 09:54 vite.config.ts
-$ echo $VERSION
-v-release-perf-20260108095309
-$ TAG="${VERSION}"
-$ echo "Generated Tag.. ${TAG}"
-Generated Tag.. v-release-perf-20260108095309
-$ podman login -u $IMAGE_REGISTRY_USERNAME -p $IMAGE_REGISTRY_PASS $CI_TEMPLATE_REGISTRY_HOST --tls-verify=false
-time="2026-01-08T09:55:05Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
-Login Succeeded!
-$ podman build -t $CI_TEMPLATE_REGISTRY_HOST/$IMAGE_NAME:$TAG -f Dockerfile --tls-verify=false --build-arg ENV=$ENV --build-arg VERSION=$TAG
-time="2026-01-08T09:55:06Z" level=warning msg="Using cgroups-v1 which is deprecated in favor of cgroups-v2 with Podman v5 and will be removed in a future version. Set environment variable `PODMAN_IGNORE_CGROUPSV1_WARNING` to hide this warning."
-STEP 1/9: FROM registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1754404361
-Trying to pull registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1754404361...
-Getting image source signatures
-Copying blob sha256:613427f0e77fd8f1be00da915d68c78faccedd0df15cd5b56a901896c18a59df
-Copying blob sha256:8bc967d65b449a3959cb0774f43737c9fa71ac2520c1afce0c8f66afcf103c29
-Copying blob sha256:3333497c0035eb1d93b5e4b1019a73f956d31c9de90cffd7b37437c219e2e356
-Copying config sha256:f7a97e21fd26661a1184615ca1e16f854b4b97f80518bf69b768c76842e90769
-Writing manifest to image destination
-STEP 2/9: USER 0
---> 04e9fe776379
-STEP 3/9: RUN mkdir -p /usr/share/nginx/html/merchantsimulator
---> f473edb98c32
-STEP 4/9: COPY ./dist/ /usr/share/nginx/html/merchantsimulator
---> b79f033f2783
-STEP 5/9: COPY ./dist/runtime-config.template.js /usr/share/nginx/html/merchantsimulator/runtime-config.template.js
---> 5096da1d6d08
-STEP 6/9: RUN chown -R 1001:0 /usr/share/nginx/html/merchantsimulator     && chown -R g+w /usr/share/nginx/html/merchantsimulator
-chown: invalid user: 'g+w'
-subprocess exited with status 1
-subprocess exited with status 1
-Error: building at STEP "RUN chown -R 1001:0 /usr/share/nginx/html/merchantsimulator     && chown -R g+w /usr/share/nginx/html/merchantsimulator": exit status 1
-Cleaning up project directory and file based variables
-00:03
-ERROR: Job failed: exit code 1
+# FROM registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1754404361
+# USER 0
+# RUN mkdir -p /usr/share/nginx/html/merchantsimulator
+# COPY ./dist/ /usr/share/nginx/html/merchantsimulator
+# RUN ls -lrth /usr/share/nginx/html/merchantsimulator
+# RUN chmod 755 -R  /usr/share/nginx/html/merchantsimulator
+# RUN chown -R nginx:nginx /usr/share/nginx/html/merchantsimulator
+# COPY ./nginx.conf /etc/nginx/nginx.conf
+# EXPOSE 8080/tcp
+# CMD ["/usr/sbin/nginx", "-g", "daemon off;"]
+
+
+FROM registry.dev.sbiepay.sbi:8443/ubi9/nginx-126:9.6-1754404361
+
+USER 0
+
+# Create app directory
+RUN mkdir -p /usr/share/nginx/html/merchantsimulator
+
+# Copy frontend build
+COPY ./dist/ /usr/share/nginx/html/merchantsimulator
+
+# Copy runtime config template (IMPORTANT)
+COPY ./dist/runtime-config.template.js /usr/share/nginx/html/merchantsimulator/runtime-config.template.js
+
+
+RUN chown -R 1001:0 /usr/share/nginx/html/merchantsimulator \
+    && chmod -R g+w /usr/share/nginx/html/merchantsimulator
+
+COPY ./nginx.conf /etc/nginx/nginx.conf
+
+EXPOSE 8080/tcp
+
+# Generate runtime-config.js from env vars and start nginx
+CMD ["/bin/sh", "-c", \
+  "envsubst < /usr/share/nginx/html/merchantsimulator/runtime-config.template.js \
+  > /usr/share/nginx/html/merchantsimulator/runtime-config.js && \
+  /usr/sbin/nginx -g 'daemon off;'"]
